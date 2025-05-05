@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../card/card_create_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,12 +31,26 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _navigateToCreateCard() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CardCreateScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('CardsEasy'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _navigateToCreateCard,
+            tooltip: '创建新卡片',
+          ),
+        ],
       ),
       body: Row(
         children: [
