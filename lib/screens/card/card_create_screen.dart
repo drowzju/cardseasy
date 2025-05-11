@@ -48,6 +48,65 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
         // 触发重建以更新预览
       });
     });
+    
+    // 在初始化时弹出标题输入对话框
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showTitleInputDialog();
+    });
+  }
+
+  // 显示标题输入对话框
+  void _showTitleInputDialog() {
+    final TextEditingController dialogController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('输入卡片标题'),
+        content: TextField(
+          controller: dialogController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: '请输入卡片标题',
+            border: OutlineInputBorder(),
+          ),
+          maxLength: 80,
+          onSubmitted: (value) {
+            if (value.trim().isNotEmpty) {
+              Navigator.pop(context, value);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              final String title = dialogController.text;
+              if (title.trim().isNotEmpty) {
+                Navigator.pop(context, title);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('请输入标题')),
+                );
+              }
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    ).then((title) {
+      if (title == null || title.trim().isEmpty) {
+        Navigator.pop(context); // 如果没有输入标题，返回上一页
+        return;
+      }
+      setState(() {
+        _titleController.text = title;
+      });
+    });
   }
 
   @override
@@ -350,12 +409,12 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('创建新卡片'),
+        title: Text(_titleController.text.isEmpty ? '创建新卡片' : _titleController.text),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Column(
         children: [
-          _buildHeaderSection(),
+          _buildSaveDirectorySection(), // 新的保存目录选择区域
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -386,37 +445,23 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     );
   }
 
-  // 构建头部区域
-  Widget _buildHeaderSection() {
+  // 新的保存目录选择区域
+  Widget _buildSaveDirectorySection() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          TextField(
-            controller: _titleController,
-            decoration: const InputDecoration(
-              labelText: '卡片标题',
-              border: OutlineInputBorder(),
+          Expanded(
+            child: Text(
+              '保存位置: ${_saveDirectory ?? "未选择"}',
+              style: const TextStyle(fontSize: 16),
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLength: 80,
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '保存位置: ${_saveDirectory ?? "未选择"}',
-                  style: const TextStyle(fontSize: 16),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _selectSaveDirectory,
-                child: const Text('选择文件夹'),
-              ),
-            ],
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: _selectSaveDirectory,
+            child: const Text('选择文件夹'),
           ),
         ],
       ),
