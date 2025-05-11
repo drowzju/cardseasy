@@ -132,6 +132,19 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
           _keyPoints.add(keyPoint);
           _keyPointControllers[id] = controller;
           _currentKeyPointId = id;
+          _isKeyPointsExpanded = true;
+          _keyPointExpandedStates[id] = true;
+        });
+
+        // 添加延迟以确保布局已更新
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
         });
       }
     });
@@ -748,32 +761,29 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   // 生成完整的Markdown内容
   String _generateFullMarkdown() {
     final StringBuffer markdown = StringBuffer();
-
+    
     // 添加标题
     markdown.writeln('# ${_titleController.text}\n');
-
-    // 添加创建时间
-    markdown.writeln('> 创建时间：${DateTime.now().toString()}\n');
-
+    
     // 添加整体概念
     if (_contentController.text.isNotEmpty) {
-      markdown.writeln('## 整体概念\n');
+      markdown.writeln('# 整体概念\n');
       markdown.writeln('${_contentController.text}\n');
     }
-
+    
     // 添加关键知识点
     if (_keyPoints.isNotEmpty) {
-      markdown.writeln('## 关键知识点\n');
-
+      markdown.writeln('# 关键知识点\n');
+      
       for (final keyPoint in _keyPoints) {
         final String content = _keyPointControllers[keyPoint.id]?.text ?? '';
         if (content.isNotEmpty) {
-          markdown.writeln('### ${keyPoint.title}\n');
+          markdown.writeln('## ${keyPoint.title}\n');
           markdown.writeln('$content\n');
         }
       }
     }
-
+    
     return markdown.toString();
   }
 }
