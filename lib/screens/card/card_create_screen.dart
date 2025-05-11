@@ -36,7 +36,10 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 当前编辑模式
   String _currentEditMode = 'text'; // 'text', 'bold', 'italic', 'heading', 'list'
-
+  
+  // 添加滚动控制器
+  final ScrollController _scrollController = ScrollController();
+  
   @override
   void initState() {
     super.initState();
@@ -66,6 +69,9 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     for (var controller in _keyPointControllers.values) {
       controller.dispose();
     }
+    
+    // 释放滚动控制器
+    _scrollController.dispose();
     
     super.dispose();
   }
@@ -182,6 +188,12 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     setState(() {
       _currentKeyPointId = id;
       _currentEditMode = 'text'; // 重置编辑模式
+      
+      // 确保展开当前选中的知识点
+      _keyPointExpandedStates[id] = true;
+      
+      // 滚动到当前编辑区域
+      _scrollToCurrentEditor();
     });
   }
 
@@ -391,34 +403,246 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     );
   }
 
+  // 添加折叠状态控制变量
+  bool _isConceptExpanded = true;
+  bool _isKeyPointsExpanded = true;
+  Map<String, bool> _keyPointExpandedStates = {};
+  
   // 构建编辑区域
   Widget _buildEditorSection() {
     return Expanded(
-      child: Column(
-        children: [
-          // 整体概念部分
-          Expanded(
-            flex: 1,
-            child: Card(
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        child: Column(
+          children: [
+            // 整体概念部分
+            Card(
               margin: const EdgeInsets.fromLTRB(16, 0, 8, 8),
               elevation: 4,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 整体概念标签
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // 整体概念标签 - 添加折叠功能
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _isConceptExpanded = !_isConceptExpanded;
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Row(
+                        children: [
+                          // 折叠/展开图标移到左侧
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: SvgPicture.asset(
+                              _isConceptExpanded 
+                                ? 'assets/icons/expand_less.svg'
+                                : 'assets/icons/expand_more.svg',
+                              width: 24,
+                              height: 24,
+                              colorFilter: ColorFilter.mode(
+                                Theme.of(context).colorScheme.primary,
+                                BlendMode.srcIn
+                              ),
+                            ),
+                          ),
+                          const Text('整体概念', 
+                            style: TextStyle(
+                              fontSize: 18, 
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                          const Spacer(),
+                          // 当前编辑指示器
+                          if (_currentKeyPointId == null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text('当前编辑', style: TextStyle(fontSize: 12)),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // 使用AnimatedSize实现平滑的折叠/展开效果
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    child: _isConceptExpanded ? Column(
                       children: [
-                        const Text('整体概念', 
-                          style: TextStyle(
-                            fontSize: 18, 
-                            fontWeight: FontWeight.bold
+                        // Markdown编辑工具栏
+                        if (_currentKeyPointId == null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: MarkdownToolbar(
+                              currentEditMode: _currentEditMode,
+                              onFormatSelected: _insertMarkdownFormat,
+                              onImageSelected: _selectImage,
+                            ),
+                          ),
+                        
+                        // 整体概念输入框
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _currentKeyPointId = null; // 设置为编辑整体概念
+                              _scrollToCurrentEditor();
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Container(
+                              height: 150,
+                              child: TextField(
+                                controller: _contentController,
+                                maxLines: null,
+                                decoration: const InputDecoration(
+                                  hintText: '在这里输入概念内容。支持文本和图片\n选中文字后点击上方按钮可应用粗体、斜体等格式',
+                                  border: OutlineInputBorder(),
+                                ),
+                                expands: true,
+                              ),
+                            ),
                           ),
                         ),
-                        // 添加一个指示器，显示当前编辑的是整体概念
-                        if (_currentKeyPointId == null)
+                      ],
+                    ) : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
+            
+            // 关键知识点部分
+            Card(
+              margin: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+              elevation: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 关键知识点标签和添加按钮 - 添加折叠功能
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _isKeyPointsExpanded = !_isKeyPointsExpanded;
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Row(
+                        children: [
+                          // 折叠/展开图标移到左侧
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: SvgPicture.asset(
+                              _isKeyPointsExpanded 
+                                ? 'assets/icons/expand_less.svg'
+                                : 'assets/icons/expand_more.svg',
+                              width: 24,
+                              height: 24,
+                              colorFilter: ColorFilter.mode(
+                                Theme.of(context).colorScheme.primary,
+                                BlendMode.srcIn
+                              ),
+                            ),
+                          ),
+                          const Text('关键知识点', 
+                            style: TextStyle(
+                              fontSize: 18, 
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                          const Spacer(),
+                          // 添加按钮保持在右侧
+                          IconButton(
+                            icon: SvgPicture.asset(
+                              'assets/icons/add_key_point.svg',
+                              width: 24,
+                              height: 24,
+                              colorFilter: ColorFilter.mode(
+                                Theme.of(context).colorScheme.primary,
+                                BlendMode.srcIn
+                              ),
+                            ),
+                            tooltip: '添加关键知识点',
+                            onPressed: _addKeyPoint,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // 使用AnimatedSize实现平滑的折叠/展开效果
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    child: _isKeyPointsExpanded ? _buildKeyPointsList() : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 提取关键知识点列表构建为单独方法
+  Widget _buildKeyPointsList() {
+    return Container(
+      constraints: BoxConstraints(
+        minHeight: 100,
+        maxHeight: _keyPoints.isEmpty ? 100 : 400,
+      ),
+      child: _keyPoints.isEmpty
+        ? const Center(child: Text('点击 + 添加关键知识点'))
+        : ListView.builder(
+            shrinkWrap: true,
+            itemCount: _keyPoints.length,
+            itemBuilder: (context, index) {
+              final keyPoint = _keyPoints[index];
+              final bool isSelected = _currentKeyPointId == keyPoint.id;
+              
+              // 确保每个知识点都有折叠状态
+              _keyPointExpandedStates.putIfAbsent(keyPoint.id, () => true);
+              final bool isExpanded = _keyPointExpandedStates[keyPoint.id]!;
+              
+              return Column(
+                children: [
+                  // 关键知识点标题栏
+                  ListTile(
+                    leading: IconButton(
+                      icon: SvgPicture.asset(
+                        isExpanded 
+                          ? 'assets/icons/expand_less.svg'
+                          : 'assets/icons/expand_more.svg',
+                        width: 24,
+                        height: 24,
+                        colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.primary,
+                          BlendMode.srcIn
+                        ),
+                      ),
+                      tooltip: isExpanded ? '折叠' : '展开',
+                      onPressed: () {
+                        setState(() {
+                          _keyPointExpandedStates[keyPoint.id] = !isExpanded;
+                          if (!isExpanded && !isSelected) {
+                            _setCurrentKeyPoint(keyPoint.id);
+                          }
+                        });
+                      },
+                    ),
+                    title: Text(keyPoint.title.isNotEmpty 
+                      ? keyPoint.title 
+                      : '知识点 ${index + 1}'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isSelected)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
@@ -427,178 +651,104 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                             ),
                             child: const Text('当前编辑', style: TextStyle(fontSize: 12)),
                           ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Markdown编辑工具栏
-                  if (_currentKeyPointId == null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: MarkdownToolbar(
-                        currentEditMode: _currentEditMode,
-                        onFormatSelected: _insertMarkdownFormat,
-                        onImageSelected: _selectImage,
-                      ),
-                    ),
-                  
-                  // 整体概念输入框
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _currentKeyPointId = null; // 设置为编辑整体概念
-                        });
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: TextField(
-                          controller: _contentController,
-                          maxLines: null,
-                          decoration: const InputDecoration(
-                            hintText: '在这里输入概念内容。支持文本和图片\n选中文字后点击上方按钮可应用粗体、斜体等格式',
-                            border: OutlineInputBorder(),
-                          ),
-                          expands: true,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          // 关键知识点部分
-          Expanded(
-            flex: 1,
-            child: Card(
-              margin: const EdgeInsets.fromLTRB(16, 8, 8, 16),
-              elevation: 4,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 关键知识点标签和添加按钮
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('关键知识点', 
-                          style: TextStyle(
-                            fontSize: 18, 
-                            fontWeight: FontWeight.bold
-                          ),
-                        ),
                         IconButton(
                           icon: SvgPicture.asset(
-                            'assets/icons/add_key_point.svg',
+                            'assets/icons/remove_key_point.svg',
                             width: 24,
                             height: 24,
                             colorFilter: ColorFilter.mode(
-                              Theme.of(context).colorScheme.primary,
+                              Theme.of(context).colorScheme.error,
                               BlendMode.srcIn
                             ),
                           ),
-                          tooltip: '添加关键知识点',
-                          onPressed: _addKeyPoint,
+                          tooltip: '删除此知识点',
+                          onPressed: () => _deleteKeyPoint(keyPoint.id),
                         ),
                       ],
                     ),
+                    onTap: () {
+                      _setCurrentKeyPoint(keyPoint.id);
+                      // 如果折叠了，则展开
+                      if (!isExpanded) {
+                        setState(() {
+                          _keyPointExpandedStates[keyPoint.id] = true;
+                        });
+                      }
+                    },
+                    selected: isSelected,
+                    selectedTileColor: Theme.of(context).colorScheme.primary.withOpacity(0.05),
                   ),
                   
-                  // 关键知识点列表
-                  Expanded(
-                    child: _keyPoints.isEmpty
-                      ? const Center(child: Text('点击 + 添加关键知识点'))
-                      : ListView.builder(
-                          itemCount: _keyPoints.length,
-                          itemBuilder: (context, index) {
-                            final keyPoint = _keyPoints[index];
-                            final bool isSelected = _currentKeyPointId == keyPoint.id;
-                            
-                            return Column(
-                              children: [
-                                // 关键知识点标题栏
-                                ListTile(
-                                  title: Text(keyPoint.title.isNotEmpty 
-                                    ? keyPoint.title 
-                                    : '知识点 ${index + 1}'),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (isSelected)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: const Text('当前编辑', style: TextStyle(fontSize: 12)),
-                                        ),
-                                      IconButton(
-                                        icon: SvgPicture.asset(
-                                          'assets/icons/remove_key_point.svg',
-                                          width: 24,
-                                          height: 24,
-                                          colorFilter: ColorFilter.mode(
-                                            Theme.of(context).colorScheme.error,
-                                            BlendMode.srcIn
-                                          ),
-                                        ),
-                                        tooltip: '删除此知识点',
-                                        onPressed: () => _deleteKeyPoint(keyPoint.id),
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: () => _setCurrentKeyPoint(keyPoint.id),
-                                  selected: isSelected,
-                                  selectedTileColor: Theme.of(context).colorScheme.primary.withOpacity(0.05),
-                                ),
-                                
-                                // 如果是当前选中的知识点，显示编辑器
-                                if (isSelected)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                    child: Column(
-                                      children: [
-                                        // Markdown工具栏
-                                        MarkdownToolbar(
-                                          currentEditMode: _currentEditMode,
-                                          onFormatSelected: _insertMarkdownFormat,
-                                          onImageSelected: _selectImage,
-                                        ),
-                                        
-                                        // 编辑框
-                                        Container(
-                                          height: 150,
-                                          margin: const EdgeInsets.only(bottom: 16),
-                                          child: TextField(
-                                            controller: _keyPointControllers[keyPoint.id],
-                                            maxLines: null,
-                                            decoration: const InputDecoration(
-                                              hintText: '输入关键知识点内容...',
-                                              border: OutlineInputBorder(),
-                                            ),
-                                            expands: true,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                  ),
+                  // 如果是当前选中的知识点且已展开，显示编辑器
+                  if (isSelected && isExpanded)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        children: [
+                          // Markdown工具栏
+                          MarkdownToolbar(
+                            currentEditMode: _currentEditMode,
+                            onFormatSelected: _insertMarkdownFormat,
+                            onImageSelected: _selectImage,
+                          ),
+                          
+                          // 编辑框
+                          Container(
+                            height: 150,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: TextField(
+                              controller: _keyPointControllers[keyPoint.id],
+                              maxLines: null,
+                              decoration: const InputDecoration(
+                                hintText: '输入关键知识点内容...',
+                                border: OutlineInputBorder(),
+                              ),
+                              expands: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
-              ),
-            ),
+              );
+            },
           ),
-        ],
-      ),
     );
   }
+  
+  // 添加滚动到当前编辑区域的方法
+  void _scrollToCurrentEditor() {
+    // 使用Future.delayed确保在布局完成后滚动
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      
+      // 获取当前编辑区域的位置
+      double targetPosition = 0;
+      
+      if (_currentKeyPointId == null) {
+        // 如果是编辑整体概念，滚动到顶部
+        targetPosition = 0;
+      } else {
+        // 如果是编辑关键知识点，找到对应的位置
+        final int index = _keyPoints.indexWhere((kp) => kp.id == _currentKeyPointId);
+        if (index != -1) {
+          // 估算位置：每个知识点标题高度约50，加上前面整体概念的高度
+          targetPosition = 200 + (index * 50);
+        }
+      }
+      
+      // 执行滚动，带有动画效果
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          targetPosition,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+  
+
 
   // 构建预览区域
   // 构建预览区域
