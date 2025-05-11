@@ -110,9 +110,22 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     final int selectionStart = currentValue.selection.baseOffset;
     final int selectionEnd = currentValue.selection.extentOffset;
     
+    // 确保选择范围有效
     if (selectionStart < 0 || selectionEnd < 0) {
+      _showFormatHintDialog('请先选择要格式化的文本');
       return;
     }
+    
+    // 确保选择范围在文本长度内
+    final int textLength = currentValue.text.length;
+    if (selectionStart > textLength || selectionEnd > textLength) {
+      _showFormatHintDialog('文本选择范围无效，请重新选择');
+      return;
+    }
+    
+    // 确保起始位置不大于结束位置
+    final int validStart = selectionStart <= selectionEnd ? selectionStart : selectionEnd;
+    final int validEnd = selectionStart <= selectionEnd ? selectionEnd : selectionStart;
     
     String selectedText = '';
     String newText = '';
@@ -120,8 +133,35 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     String suffix = '';
     
     // 获取选中的文本
-    if (selectionStart != selectionEnd) {
-      selectedText = currentValue.text.substring(selectionStart, selectionEnd);
+    if (validStart != validEnd) {
+      try {
+        selectedText = currentValue.text.substring(validStart, validEnd);
+      } catch (e) {
+        print('获取选中文本失败: $e');
+        _showFormatHintDialog('获取选中文本失败，请重新选择');
+        return;
+      }
+    } else {
+      // 如果是粗体、斜体、有序列表或无序列表，但没有选中文本，显示提示
+      if (format == 'bold' || format == 'italic' || format == 'list' || format == 'numbered_list') {
+        String formatName = '';
+        switch (format) {
+          case 'bold':
+            formatName = '粗体';
+            break;
+          case 'italic':
+            formatName = '斜体';
+            break;
+          case 'list':
+            formatName = '无序列表';
+            break;
+          case 'numbered_list':
+            formatName = '有序列表';
+            break;
+        }
+        _showFormatHintDialog('请先选择要设置为$formatName的文本');
+        return;
+      }
     }
     
     // 根据不同的格式设置前缀和后缀
@@ -147,12 +187,45 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
         suffix = '';
         break;
       case 'list':
-        prefix = '- ';
-        suffix = '';
-        break;
       case 'numbered_list':
-        prefix = '1. ';
-        suffix = '';
+        // 对于列表，我们需要特殊处理多行文本
+        if (selectedText.contains('\n')) {
+          final List<String> lines = selectedText.split('\n');
+          final List<String> formattedLines = [];
+          
+          for (int i = 0; i < lines.length; i++) {
+            final String line = lines[i].trim();
+            if (line.isNotEmpty) {
+              if (format == 'list') {
+                formattedLines.add('- $line');
+              } else { // numbered_list
+                formattedLines.add('${i + 1}. $line');
+              }
+            } else {
+              formattedLines.add(line); // 保留空行
+            }
+          }
+          
+          // 使用新的格式化文本替换选中文本
+          newText = currentValue.text.substring(0, validStart) + 
+                    formattedLines.join('\n') + 
+                    currentValue.text.substring(validEnd);
+          
+          // 设置新的选择范围
+          _contentController.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection(
+              baseOffset: validStart,
+              extentOffset: validStart + formattedLines.join('\n').length,
+            ),
+          );
+          
+          return; // 提前返回，不执行后面的通用逻辑
+        } else {
+          // 单行文本的情况
+          prefix = format == 'list' ? '- ' : '1. ';
+          suffix = '';
+        }
         break;
       case 'code':
         prefix = '`';
@@ -181,30 +254,49 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     }
     
     // 构建新文本
-    if (selectedText.isEmpty) {
-      newText = currentValue.text.substring(0, selectionStart) + 
-                prefix + suffix + 
-                currentValue.text.substring(selectionEnd);
-      
-      // 设置新的光标位置
-      _contentController.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: selectionStart + prefix.length),
-      );
-    } else {
-      newText = currentValue.text.substring(0, selectionStart) + 
-                prefix + selectedText + suffix + 
-                currentValue.text.substring(selectionEnd);
-      
-      // 设置新的选择范围
-      _contentController.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection(
-          baseOffset: selectionStart + prefix.length,
-          extentOffset: selectionStart + prefix.length + selectedText.length,
-        ),
-      );
+    try {
+      if (selectedText.isEmpty) {
+        newText = currentValue.text.substring(0, validStart) + 
+                  prefix + suffix + 
+                  currentValue.text.substring(validEnd);
+        
+        // 设置新的光标位置
+        _contentController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: validStart + prefix.length),
+        );
+      } else {
+        newText = currentValue.text.substring(0, validStart) + 
+                  prefix + selectedText + suffix + 
+                  currentValue.text.substring(validEnd);
+        
+        // 设置新的选择范围
+        _contentController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection(
+            baseOffset: validStart + prefix.length,
+            extentOffset: validStart + prefix.length + selectedText.length,
+          ),
+        );
+      }
+    } catch (e) {
+      print('应用格式失败: $e');
+      _showFormatHintDialog('应用格式失败: $e');
     }
+  }
+  
+  // 添加格式提示对话框
+  void _showFormatHintDialog(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: '了解',
+          onPressed: () {},
+        ),
+      ),
+    );
   }
 
   Future<void> _saveCard() async {
@@ -363,35 +455,27 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                               children: [
                                 IconButton(
                                   icon: const Icon(Icons.format_bold),
-                                  tooltip: '粗体',
+                                  tooltip: '粗体(先选中文字再点击)',
                                   onPressed: () => _insertMarkdownFormat('bold'),
                                   color: _currentEditMode == 'bold' ? Colors.blue : null,
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.format_italic),
-                                  tooltip: '斜体',
+                                  tooltip: '斜体(先选中文字再点击)',
                                   onPressed: () => _insertMarkdownFormat('italic'),
                                   color: _currentEditMode == 'italic' ? Colors.blue : null,
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.title),
-                                  tooltip: '一级标题',
-                                  onPressed: () => _insertMarkdownFormat('heading1'),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.text_fields),
-                                  tooltip: '二级标题',
-                                  onPressed: () => _insertMarkdownFormat('heading2'),
-                                ),
-                                IconButton(
                                   icon: const Icon(Icons.format_list_bulleted),
-                                  tooltip: '无序列表',
+                                  tooltip: '无序列表(先选中文字再点击)',
                                   onPressed: () => _insertMarkdownFormat('list'),
+                                  color: _currentEditMode == 'list' ? Colors.blue : null,
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.format_list_numbered),
-                                  tooltip: '有序列表',
+                                  tooltip: '有序列表(先选中文字再点击)',
                                   onPressed: () => _insertMarkdownFormat('numbered_list'),
+                                  color: _currentEditMode == 'numbered_list' ? Colors.blue : null,
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.code),
@@ -436,10 +520,23 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                               controller: _contentController,
                               maxLines: null,
                               decoration: const InputDecoration(
-                                hintText: '在这里输入概念内容。支持文本和图片',
+                                hintText: '在这里输入概念内容。支持文本和图片\n选中文字后点击上方按钮可应用粗体、斜体等格式',
                                 border: OutlineInputBorder(),
                               ),
                               expands: true,
+                              // 添加选择文本变化监听
+                              onTap: () {
+                                // 当用户点击文本框时，检查是否有选中的文本
+                                Future.delayed(const Duration(milliseconds: 100), () {
+                                  final selection = _contentController.selection;
+                                  if (selection.baseOffset != selection.extentOffset) {
+                                    // 有选中的文本，可以在这里添加视觉提示
+                                    setState(() {
+                                      // 更新状态以显示可用的格式化选项
+                                    });
+                                  }
+                                });
+                              },
                             ),
                           ),
                         ),
