@@ -6,7 +6,7 @@ class CardSaver {
   static Future<bool> saveCard({
     required String title,
     required String content,
-    List<String> keyPoints = const [],
+    List<Map<String, String>> keyPoints = const [], // 修改为Map类型，包含title和content
     String? saveDirectory,
     List<String> imageFiles = const [],
     required Function(String) showErrorDialog,
@@ -45,7 +45,10 @@ class CardSaver {
       if (keyPoints.isNotEmpty) {
         fullContent += '## 关键知识点\n\n';
         for (int i = 0; i < keyPoints.length; i++) {
-          fullContent += '### 知识点 ${i + 1}\n\n${keyPoints[i]}\n\n';
+          final keyPointTitle = keyPoints[i]['title'] ?? '知识点 ${i + 1}';
+          final keyPointContent = keyPoints[i]['content'] ?? '';
+          
+          fullContent += '### $keyPointTitle\n\n$keyPointContent\n\n';
         }
       }
       

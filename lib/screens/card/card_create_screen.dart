@@ -46,8 +46,15 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       });
     });
     
-    // 添加一个默认的关键知识点
-    _addKeyPoint();
+    // 不要在这里调用 _addKeyPoint()
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // 移除自动添加知识点的逻辑
+    // 不再调用 Future.microtask(() => _addKeyPoint());
   }
 
   @override
@@ -65,23 +72,70 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 添加关键知识点
   void _addKeyPoint() {
-    final String id = const Uuid().v4();
-    final keyPoint = KeyPoint(id: id);
-    final controller = TextEditingController();
+    // 创建一个局部控制器
+    final TextEditingController dialogController = TextEditingController();
     
-    controller.addListener(() {
-      final int index = _keyPoints.indexWhere((kp) => kp.id == id);
-      if (index != -1) {
+    // 显示标题输入对话框
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 用户必须输入标题或取消
+      builder: (context) => AlertDialog(
+        title: const Text('输入知识点标题'),
+        content: TextField(
+          controller: dialogController, // 使用局部控制器
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: '请输入知识点标题',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (value) {
+            if (value.trim().isNotEmpty) {
+              Navigator.pop(context, value);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              final String title = dialogController.text;
+              if (title.trim().isNotEmpty) {
+                Navigator.pop(context, title);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('请输入标题')),
+                );
+              }
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    ).then((title) {
+      if (title != null && title.trim().isNotEmpty) {
+        final String id = const Uuid().v4();
+        // 确保 title 不为空
+        final keyPoint = KeyPoint(id: id, title: title);
+        final controller = TextEditingController();
+        
+        controller.addListener(() {
+          final int index = _keyPoints.indexWhere((kp) => kp.id == id);
+          if (index != -1) {
+            setState(() {
+              _keyPoints[index].content = controller.text;
+            });
+          }
+        });
+        
         setState(() {
-          _keyPoints[index].content = controller.text;
+          _keyPoints.add(keyPoint);
+          _keyPointControllers[id] = controller;
+          _currentKeyPointId = id; // 设置为当前编辑的关键知识点
         });
       }
-    });
-    
-    setState(() {
-      _keyPoints.add(keyPoint);
-      _keyPointControllers[id] = controller;
-      _currentKeyPointId = id; // 设置为当前编辑的关键知识点
     });
   }
   
@@ -201,17 +255,20 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     setState(() {
       _isSaving = true;
     });
-
+  
     // 收集所有关键知识点内容
-    final List<String> keyPointsContent = _keyPoints
-        .map((kp) => kp.content)
-        .where((content) => content.trim().isNotEmpty)
+    final List<Map<String, String>> keyPointsData = _keyPoints
+        .where((kp) => kp.content.trim().isNotEmpty)
+        .map((kp) => {
+          'title': kp.title,
+          'content': kp.content,
+        })
         .toList();
-
+  
     final bool success = await CardSaver.saveCard(
       title: _titleController.text,
       content: _contentController.text,
-      keyPoints: keyPointsContent,
+      keyPoints: keyPointsData,
       saveDirectory: _saveDirectory,
       imageFiles: _imageFiles,
       showErrorDialog: _showErrorDialog,
@@ -464,7 +521,9 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                               children: [
                                 // 关键知识点标题栏
                                 ListTile(
-                                  title: Text('知识点 ${index + 1}'),
+                                  title: Text(keyPoint.title.isNotEmpty 
+                                    ? keyPoint.title 
+                                    : '知识点 ${index + 1}'),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -542,89 +601,90 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   }
 
   // 构建预览区域
+  // 构建预览区域
   Widget _buildPreviewSection() {
-    // 确定当前预览的内容
-    String previewContent = '';
-    String previewTitle = '';
-    
-    if (_currentKeyPointId != null) {
-      // 预览关键知识点
-      final int index = _keyPoints.indexWhere((kp) => kp.id == _currentKeyPointId);
-      if (index != -1) {
-        previewContent = _keyPoints[index].content;
-        previewTitle = '预览: 知识点 ${index + 1}';
-      }
-    } else {
-      // 预览整体概念
-      previewContent = _contentController.text;
-      previewTitle = '预览: 整体概念';
+  // 确定当前预览的内容
+  String previewContent = '';
+  String previewTitle = '';
+  
+  if (_currentKeyPointId != null) {
+    // 预览关键知识点
+    final int index = _keyPoints.indexWhere((kp) => kp.id == _currentKeyPointId);
+    if (index != -1) {
+      previewContent = _keyPoints[index].content;
+      // 添加空值检查
+      previewTitle = '预览: ${_keyPoints[index].title.isNotEmpty ? _keyPoints[index].title : '知识点 ${index + 1}'}';
     }
-    
-    return Expanded(
-      child: Card(
-        margin: const EdgeInsets.fromLTRB(8, 0, 16, 16),
-        elevation: 4,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 预览标签
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(previewTitle, 
-                    style: const TextStyle(
-                      fontSize: 18, 
-                      fontWeight: FontWeight.bold
-                    ),
+  } else {
+    // 预览整体概念
+    previewContent = _contentController.text;
+    previewTitle = '预览: 整体概念';
+  }
+  
+  return Expanded(
+    child: Card(
+      margin: const EdgeInsets.fromLTRB(8, 0, 16, 16),
+      elevation: 4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 预览标签
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(previewTitle, 
+                  style: const TextStyle(
+                    fontSize: 18, 
+                    fontWeight: FontWeight.bold
                   ),
-                ],
-              ),
-            ),
-            
-            // Markdown预览
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Markdown(
-                  data: previewContent,
-                  styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(fontSize: 16),
-                    h1: GoogleFonts.notoSans(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    h2: GoogleFonts.notoSans(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    h3: GoogleFonts.notoSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    code: GoogleFonts.firaCode(
-                      backgroundColor: Colors.grey.shade200,
-                    ),
-                    codeblockDecoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  imageBuilder: (uri, title, alt) {
-                    return Image.file(
-                      File(uri.toString()),
-                      errorBuilder: (context, error, stackTrace) {
-                        return Text('无法加载图片: ${uri.toString()}');
-                      },
-                    );
-                  },
                 ),
+              ],
+            ),
+          ),
+          
+          // Markdown预览
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Markdown(
+                data: previewContent,
+                styleSheet: MarkdownStyleSheet(
+                  p: const TextStyle(fontSize: 16),
+                  h1: GoogleFonts.notoSans(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  h2: GoogleFonts.notoSans(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  h3: GoogleFonts.notoSans(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  code: GoogleFonts.firaCode(
+                    backgroundColor: Colors.grey.shade200,
+                  ),
+                  codeblockDecoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                imageBuilder: (uri, title, alt) {
+                  return Image.file(
+                    File(uri.toString()),
+                    errorBuilder: (context, error, stackTrace) {
+                      return Text('无法加载图片: ${uri.toString()}');
+                    },
+                  );
+                },
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
+    ));
   }
 }
