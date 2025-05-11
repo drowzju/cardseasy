@@ -91,6 +91,12 @@ class MarkdownFormatter {
       print('应用格式失败: $e');
       showFormatHint('应用格式失败: $e');
     }
+    
+    // 新增格式冲突检测
+    if (_hasConflictingFormat(currentValue.text, format, validStart, validEnd)) {
+      showFormatHint('不能在此处应用该格式，可能与其他格式冲突');
+      return;
+    }
   }
   
   // 判断格式是否需要选中文本
@@ -109,6 +115,8 @@ class MarkdownFormatter {
       case 'list': return '无序列表';
       case 'numbered_list': return '有序列表';
       case 'code_block': return '代码块';
+      case 'quote': return '引用';
+      case 'hr': return '分割线';
       default: return format;
     }
   }
@@ -161,11 +169,19 @@ class MarkdownFormatter {
         }
         break;
       case 'link':
+        // 如果选中文本包含表格结构，则不应用链接格式
+        if (selectedText.contains('| --- |')) {
+          return FormatResult('', '');
+        }
         prefix = '[';
         suffix = '](链接URL)';
         break;
       case 'table':
-        prefix = '| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 内容1 | 内容2 | 内容3 |\n';
+        // 如果选中文本包含链接结构，则不应用表格格式
+        if (selectedText.contains('[]()')) {
+          return FormatResult('', '');
+        }
+        prefix = '\n| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 内容1 | 内容2 | 内容3 |\n';
         suffix = '';
         break;
       case 'quote':
@@ -177,7 +193,7 @@ class MarkdownFormatter {
         suffix = '';
         break;
     }
-    
+
     return FormatResult(prefix, suffix);
   }
   
@@ -240,6 +256,21 @@ class MarkdownFormatter {
         print(message); // 简单打印消息，实际应用中可能需要更好的处理方式
       },
     );
+  }
+  
+  // 新增冲突检测方法
+  static bool _hasConflictingFormat(String text, String format, int start, int end) {
+    final selectedText = text.substring(start, end);
+    
+    // 检测表格与链接的冲突
+    if (format == 'table' && selectedText.contains('[]()')) {
+      return true;
+    }
+    if (format == 'link' && selectedText.contains('| --- |')) {
+      return true;
+    }
+    
+    return false;
   }
 }
 
