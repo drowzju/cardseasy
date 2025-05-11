@@ -46,7 +46,7 @@ class MarkdownToolbar extends StatelessWidget {
           _buildSvgToolbarButton(
             svgPath: 'assets/icons/code_block.svg',
             tooltip: '代码块',
-            format: 'codeblock',
+            format: 'code_block',
             context: context,
           ),
           _buildSvgToolbarButton(
@@ -73,13 +73,7 @@ class MarkdownToolbar extends StatelessWidget {
             format: 'hr',
             context: context,
           ),
-          _buildSvgToolbarButton(
-            svgPath: 'assets/icons/image.svg',
-            tooltip: '插入图片',
-            format: 'image',
-            context: context,
-            onPressed: onImageSelected,
-          ),
+          _buildImageButton(context),
         ],
       ),
     );
@@ -93,19 +87,57 @@ class MarkdownToolbar extends StatelessWidget {
     VoidCallback? onPressed,
   }) {
     final bool isActive = currentEditMode == format;
-    final Color iconColor = isActive 
-        ? Theme.of(context).colorScheme.primary 
-        : Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
     
-    return IconButton(
-      icon: SvgPicture.asset(
-        svgPath,
-        width: 24,
-        height: 24,
-        colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(4.0),
+          onTap: onPressed ?? () {
+            onFormatSelected(format);
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: SvgPicture.asset(
+              svgPath,
+              width: 20,
+              height: 20,
+              colorFilter: ColorFilter.mode(
+                isActive 
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurface,
+                BlendMode.srcIn
+              ),
+            ),
+          ),
+        ),
       ),
-      tooltip: tooltip,
-      onPressed: onPressed ?? () => onFormatSelected(format),
+    );
+  }
+
+  Widget _buildImageButton(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Tooltip(
+        message: '插入图片',
+        child: InkWell(
+          borderRadius: BorderRadius.circular(4.0),
+          onTap: onImageSelected,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: SvgPicture.asset(
+              'assets/icons/image.svg',
+              width: 20,
+              height: 20,
+              colorFilter: ColorFilter.mode(
+                Theme.of(context).colorScheme.onSurface,
+                BlendMode.srcIn
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

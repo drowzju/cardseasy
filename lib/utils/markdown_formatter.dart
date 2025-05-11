@@ -96,8 +96,8 @@ class MarkdownFormatter {
   // 判断格式是否需要选中文本
   static bool _needsSelectedText(String format) {
     return [
-      'bold', 'italic', 'list', 'numbered_list', 
-      'codeblock'
+      'bold', 'italic', 'list', 'numbered_list',
+      'code_block'
     ].contains(format);
   }
   
@@ -108,7 +108,7 @@ class MarkdownFormatter {
       case 'italic': return '斜体';
       case 'list': return '无序列表';
       case 'numbered_list': return '有序列表';
-      case 'codeblock': return '代码块';
+      case 'code_block': return '代码块';
       default: return format;
     }
   }
@@ -147,7 +147,7 @@ class MarkdownFormatter {
         prefix = '1. ';
         suffix = '';
         break;
-      case 'codeblock':
+      case 'code_block':
         // 代码块需要在前后添加换行和三个反引号
         if (!selectedText.startsWith('\n')) {
           prefix = '\n```\n';
@@ -196,9 +196,20 @@ class MarkdownFormatter {
       final String line = lines[i].trim();
       if (line.isNotEmpty) {
         if (format == 'list') {
-          formattedLines.add('- $line');
+          // 检查是否已经是无序列表项
+          if (line.startsWith('- ')) {
+            formattedLines.add(line);
+          } else {
+            formattedLines.add('- $line');
+          }
         } else { // numbered_list
-          formattedLines.add('${i + 1}. $line');
+          // 检查是否已经是有序列表项
+          final RegExp orderedListRegex = RegExp(r'^\d+\.\s');
+          if (orderedListRegex.hasMatch(line)) {
+            formattedLines.add(line);
+          } else {
+            formattedLines.add('${i + 1}. $line');
+          }
         }
       } else {
         formattedLines.add(line); // 保留空行
@@ -206,8 +217,8 @@ class MarkdownFormatter {
     }
     
     // 使用新的格式化文本替换选中文本
-    final String newText = controller.text.substring(0, validStart) + 
-                formattedLines.join('\n') + 
+    final String newText = controller.text.substring(0, validStart) +
+                formattedLines.join('\n') +
                 controller.text.substring(validEnd);
     
     // 设置新的选择范围
@@ -217,6 +228,17 @@ class MarkdownFormatter {
         baseOffset: validStart,
         extentOffset: validStart + formattedLines.join('\n').length,
       ),
+    );
+  }
+  
+  // 为了兼容现有代码，添加insertFormat方法
+  static void insertFormat(TextEditingController controller, String format) {
+    formatText(
+      controller: controller,
+      format: format,
+      showFormatHint: (message) {
+        print(message); // 简单打印消息，实际应用中可能需要更好的处理方式
+      },
     );
   }
 }

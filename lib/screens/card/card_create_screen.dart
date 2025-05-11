@@ -189,10 +189,21 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       _currentKeyPointId = id;
       _currentEditMode = 'text'; // 重置编辑模式
       
-      // 确保展开当前选中的知识点
+      // 确保展开当前选中的知识点和关键知识点区域
       _keyPointExpandedStates[id] = true;
+      _isKeyPointsExpanded = true;
       
       // 滚动到当前编辑区域
+      _scrollToCurrentEditor();
+    });
+  }
+  
+  // 在切换到整体概念编辑时确保界面展开
+  void _switchToConceptEditing() {
+    setState(() {
+      _currentKeyPointId = null;
+      _currentEditMode = 'text';
+      _isConceptExpanded = true;
       _scrollToCurrentEditor();
     });
   }
@@ -207,47 +218,80 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     }
   }
 
+  // 添加标志防止重复调用图片选择
+  bool _isSelectingImage = false;
+  
   // 选择图片
   Future<void> _selectImage() async {
-    // 确定当前使用的控制器
-    final TextEditingController currentController = _currentKeyPointId != null 
-        ? _keyPointControllers[_currentKeyPointId]! 
-        : _contentController;
+    // 防止重复调用
+    if (_isSelectingImage) return;
+    _isSelectingImage = true;
     
-    await ImageHandler.selectAndProcessImage(
-      contentController: currentController,
-      saveDirectory: _saveDirectory,
-      selectSaveDirectory: _selectSaveDirectory,
-      imageFiles: _imageFiles,
-      showErrorDialog: _showErrorDialog,
-      updateImageFiles: (files) {
+    try {
+      // 确定当前使用的控制器
+      final TextEditingController currentController = _currentKeyPointId != null
+          ? _keyPointControllers[_currentKeyPointId]!
+          : _contentController;
+      
+      await ImageHandler.selectAndProcessImage(
+        contentController: currentController,
+        saveDirectory: _saveDirectory,
+        selectSaveDirectory: _selectSaveDirectory,
+        imageFiles: _imageFiles,
+        showErrorDialog: _showErrorDialog,
+        updateImageFiles: (files) {
+          if (mounted) {
+            setState(() {
+              _imageFiles.clear();
+              _imageFiles.addAll(files);
+              
+              // 确保编辑区域保持展开状态
+              _isConceptExpanded = true;
+              if (_currentKeyPointId != null) {
+                _isKeyPointsExpanded = true;
+                _keyPointExpandedStates[_currentKeyPointId!] = true;
+              }
+            });
+          }
+        },
+      );
+    } finally {
+      if (mounted) {
         setState(() {
-          _imageFiles.clear();
-          _imageFiles.addAll(files);
+          _isSelectingImage = false;
         });
-      },
-    );
+      }
+    }
   }
 
   // 插入Markdown格式
   void _insertMarkdownFormat(String format) {
-    // 确定当前使用的控制器
-    final TextEditingController currentController = _currentKeyPointId != null 
-        ? _keyPointControllers[_currentKeyPointId]! 
-        : _contentController;
-    
-    MarkdownFormatter.formatText(
-      controller: currentController,
-      format: format,
-      showFormatHint: _showFormatHintDialog,
-    );
-    
-    // 更新当前编辑模式
-    setState(() {
-      _currentEditMode = format;
-    });
+    try {
+      // 确定当前使用的控制器
+      final TextEditingController currentController = _currentKeyPointId != null
+          ? _keyPointControllers[_currentKeyPointId]!
+          : _contentController;
+      
+      // 保存当前编辑模式状态
+      setState(() {
+        _currentEditMode = format;
+      });
+      
+      MarkdownFormatter.insertFormat(currentController, format);
+      
+      // 在格式应用后重置为文本模式
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          setState(() {
+            _currentEditMode = 'text';
+          });
+        }
+      });
+    } catch (e) {
+      _showErrorDialog('格式化文本时出错: $e');
+    }
   }
-  
+
   // 显示格式提示
   void _showFormatHintDialog(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -487,12 +531,10 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                           ),
                         
                         // 整体概念输入框
+                        // 在整体概念部分的GestureDetector中
                         GestureDetector(
                           onTap: () {
-                            setState(() {
-                              _currentKeyPointId = null; // 设置为编辑整体概念
-                              _scrollToCurrentEditor();
-                            });
+                            _switchToConceptEditing(); // 使用新方法替代直接设置状态
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
@@ -747,94 +789,80 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       }
     });
   }
-  
 
 
-  // 构建预览区域
-  // 构建预览区域
-  Widget _buildPreviewSection() {
-  // 确定当前预览的内容
-  String previewContent = '';
-  String previewTitle = '';
-  
-  if (_currentKeyPointId != null) {
-    // 预览关键知识点
-    final int index = _keyPoints.indexWhere((kp) => kp.id == _currentKeyPointId);
-    if (index != -1) {
-      previewContent = _keyPoints[index].content;
-      // 添加空值检查
-      previewTitle = '预览: ${_keyPoints[index].title.isNotEmpty ? _keyPoints[index].title : '知识点 ${index + 1}'}';
-    }
-  } else {
-    // 预览整体概念
-    previewContent = _contentController.text;
-    previewTitle = '预览: 整体概念';
-  }
-  
+
+// 构建预览区域
+Widget _buildPreviewSection() {
   return Expanded(
     child: Card(
       margin: const EdgeInsets.fromLTRB(8, 0, 16, 16),
       elevation: 4,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 预览标签
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(previewTitle, 
-                  style: const TextStyle(
-                    fontSize: 18, 
-                    fontWeight: FontWeight.bold
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Markdown预览
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Markdown(
-                data: previewContent,
-                styleSheet: MarkdownStyleSheet(
-                  p: const TextStyle(fontSize: 16),
-                  h1: GoogleFonts.notoSans(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  h2: GoogleFonts.notoSans(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  h3: GoogleFonts.notoSans(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  code: GoogleFonts.firaCode(
-                    backgroundColor: Colors.grey.shade200,
-                  ),
-                  codeblockDecoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                imageBuilder: (uri, title, alt) {
-                  return Image.file(
-                    File(uri.toString()),
-                    errorBuilder: (context, error, stackTrace) {
-                      return Text('无法加载图片: ${uri.toString()}');
-                    },
-                  );
-                },
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 预览标题
+            Text(
+              '预览',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            
+            // 预览内容
+            Expanded(
+              child: _buildPreviewContent(),
+            ),
+          ],
+        ),
       ),
-    ));
-  }
+    ),
+  );
+}
+
+// 构建预览内容
+Widget _buildPreviewContent() {
+  // 确定当前预览的内容
+  final String previewContent = _currentKeyPointId != null
+      ? _keyPoints.firstWhere((kp) => kp.id == _currentKeyPointId).content
+      : _contentController.text;
+  
+  return Markdown(
+    data: previewContent,
+    selectable: true,
+    styleSheet: MarkdownStyleSheet(
+      h1: GoogleFonts.notoSans(fontSize: 24, fontWeight: FontWeight.bold),
+      h2: GoogleFonts.notoSans(fontSize: 22, fontWeight: FontWeight.bold),
+      h3: GoogleFonts.notoSans(fontSize: 20, fontWeight: FontWeight.bold),
+      p: GoogleFonts.notoSans(fontSize: 16),
+      code: GoogleFonts.firaCode(
+        fontSize: 14,
+        backgroundColor: Colors.grey.shade200,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(4),
+      ),
+    ),
+    imageBuilder: (uri, title, alt) {
+      // 处理本地文件路径
+      if (uri.scheme == 'file') {
+        return Image.file(
+          File(uri.toFilePath()),
+          fit: BoxFit.contain,
+        );
+      }
+      // 处理网络图片
+      return Image.network(
+        uri.toString(),
+        fit: BoxFit.contain,
+      );
+    },
+  );
+}
 }
