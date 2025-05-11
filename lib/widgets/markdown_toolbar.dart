@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class MarkdownToolbar extends StatelessWidget {
   final String currentEditMode;
@@ -18,84 +19,93 @@ class MarkdownToolbar extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _buildToolbarButton(
-            icon: Icons.format_bold,
+          _buildSvgToolbarButton(
+            svgPath: 'assets/icons/bold.svg',
             tooltip: '粗体',
             format: 'bold',
             context: context,
           ),
-          _buildToolbarButton(
-            icon: Icons.format_italic,
+          _buildSvgToolbarButton(
+            svgPath: 'assets/icons/italic.svg',
             tooltip: '斜体',
             format: 'italic',
             context: context,
           ),
-          _buildToolbarButton(
-            icon: Icons.format_list_bulleted,
+          _buildSvgToolbarButton(
+            svgPath: 'assets/icons/list_bulleted.svg',
             tooltip: '无序列表',
             format: 'list',
             context: context,
           ),
-          _buildToolbarButton(
-            icon: Icons.format_list_numbered,
+          _buildSvgToolbarButton(
+            svgPath: 'assets/icons/list_numbered.svg',
             tooltip: '有序列表',
             format: 'numbered_list',
             context: context,
           ),
-
-          _buildToolbarButton(
-            icon: Icons.code_rounded,
+          _buildSvgToolbarButton(
+            svgPath: 'assets/icons/code_block.svg',
             tooltip: '代码块',
             format: 'codeblock',
             context: context,
           ),
-          _buildToolbarButton(
-            icon: Icons.table_chart,
+          _buildSvgToolbarButton(
+            svgPath: 'assets/icons/table.svg',
             tooltip: '表格',
             format: 'table',
             context: context,
           ),
-          _buildToolbarButton(
-            icon: Icons.link,
+          _buildSvgToolbarButton(
+            svgPath: 'assets/icons/link.svg',
             tooltip: '链接',
             format: 'link',
             context: context,
           ),
-          _buildToolbarButton(
-            icon: Icons.format_quote,
+          _buildSvgToolbarButton(
+            svgPath: 'assets/icons/quote.svg',
             tooltip: '引用',
             format: 'quote',
             context: context,
           ),
-          _buildToolbarButton(
-            icon: Icons.horizontal_rule,
+          _buildSvgToolbarButton(
+            svgPath: 'assets/icons/horizontal_rule.svg',
             tooltip: '分割线',
             format: 'hr',
             context: context,
           ),
-          IconButton(
-            icon: const Icon(Icons.image),
+          _buildSvgToolbarButton(
+            svgPath: 'assets/icons/image.svg',
             tooltip: '插入图片',
+            format: 'image',
+            context: context,
             onPressed: onImageSelected,
-            color: currentEditMode == 'image' ? Colors.blue : null,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildToolbarButton({
-    required IconData icon,
+  Widget _buildSvgToolbarButton({
+    required String svgPath,
     required String tooltip,
     required String format,
     required BuildContext context,
+    VoidCallback? onPressed,
   }) {
     final bool isActive = currentEditMode == format;
+    final Color iconColor = isActive 
+        ? Theme.of(context).colorScheme.primary 
+        : Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
+    
     return IconButton(
-      icon: Icon(icon),
+      icon: SvgPicture.asset(
+        svgPath,
+        width: 24,
+        height: 24,
+        colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+      ),
       tooltip: tooltip,
-      onPressed: () => onFormatSelected(format),
-      color: isActive ? Colors.blue : null,
+      onPressed: onPressed ?? () => onFormatSelected(format),
     );
   }
 }
