@@ -26,7 +26,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   String? _saveDirectory;
   bool _isSaving = false;
   final List<String> _imageFiles = [];
-  
+
   // 关键知识点列表
   final List<KeyPoint> _keyPoints = [];
   // 关键知识点控制器映射
@@ -36,10 +36,10 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 当前编辑模式
   String _currentEditMode = 'text'; // 'text', 'bold', 'italic', 'heading', 'list'
-  
+
   // 添加滚动控制器
   final ScrollController _scrollController = ScrollController();
-  
+
   @override
   void initState() {
     super.initState();
@@ -48,47 +48,40 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
         // 触发重建以更新预览
       });
     });
-    
-    // 不要在这里调用 _addKeyPoint()
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
-    // 移除自动添加知识点的逻辑
-    // 不再调用 Future.microtask(() => _addKeyPoint());
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
-    
+
     // 释放所有关键知识点控制器
     for (var controller in _keyPointControllers.values) {
       controller.dispose();
     }
-    
+
     // 释放滚动控制器
     _scrollController.dispose();
-    
+
     super.dispose();
   }
 
   // 添加关键知识点
   void _addKeyPoint() {
-    // 创建一个局部控制器
     final TextEditingController dialogController = TextEditingController();
-    
-    // 显示标题输入对话框
+
     showDialog(
       context: context,
-      barrierDismissible: false, // 用户必须输入标题或取消
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('输入知识点标题'),
         content: TextField(
-          controller: dialogController, // 使用局部控制器
+          controller: dialogController,
           autofocus: true,
           decoration: const InputDecoration(
             hintText: '请输入知识点标题',
@@ -123,10 +116,9 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     ).then((title) {
       if (title != null && title.trim().isNotEmpty) {
         final String id = const Uuid().v4();
-        // 确保 title 不为空
         final keyPoint = KeyPoint(id: id, title: title);
         final controller = TextEditingController();
-        
+
         controller.addListener(() {
           final int index = _keyPoints.indexWhere((kp) => kp.id == id);
           if (index != -1) {
@@ -135,16 +127,16 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
             });
           }
         });
-        
+
         setState(() {
           _keyPoints.add(keyPoint);
           _keyPointControllers[id] = controller;
-          _currentKeyPointId = id; // 设置为当前编辑的关键知识点
+          _currentKeyPointId = id;
         });
       }
     });
   }
-  
+
   // 删除关键知识点
   void _deleteKeyPoint(String id) {
     showDialog(
@@ -160,17 +152,16 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              
+
               final controller = _keyPointControllers[id];
               if (controller != null) {
                 controller.dispose();
                 _keyPointControllers.remove(id);
               }
-              
+
               setState(() {
                 _keyPoints.removeWhere((kp) => kp.id == id);
-                
-                // 如果删除的是当前编辑的关键知识点，则重置当前编辑ID
+
                 if (_currentKeyPointId == id) {
                   _currentKeyPointId = _keyPoints.isNotEmpty ? _keyPoints.first.id : null;
                 }
@@ -182,23 +173,21 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       ),
     );
   }
-  
+
   // 设置当前编辑的关键知识点
   void _setCurrentKeyPoint(String id) {
     setState(() {
       _currentKeyPointId = id;
-      _currentEditMode = 'text'; // 重置编辑模式
-      
-      // 确保展开当前选中的知识点和关键知识点区域
+      _currentEditMode = 'text';
+
       _keyPointExpandedStates[id] = true;
       _isKeyPointsExpanded = true;
-      
-      // 滚动到当前编辑区域
+
       _scrollToCurrentEditor();
     });
   }
-  
-  // 在切换到整体概念编辑时确保界面展开
+
+  // 切换到整体概念编辑
   void _switchToConceptEditing() {
     setState(() {
       _currentKeyPointId = null;
@@ -220,19 +209,17 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 添加标志防止重复调用图片选择
   bool _isSelectingImage = false;
-  
+
   // 选择图片
   Future<void> _selectImage() async {
-    // 防止重复调用
     if (_isSelectingImage) return;
     _isSelectingImage = true;
-    
+
     try {
-      // 确定当前使用的控制器
       final TextEditingController currentController = _currentKeyPointId != null
           ? _keyPointControllers[_currentKeyPointId]!
           : _contentController;
-      
+
       await ImageHandler.selectAndProcessImage(
         contentController: currentController,
         saveDirectory: _saveDirectory,
@@ -244,8 +231,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
             setState(() {
               _imageFiles.clear();
               _imageFiles.addAll(files);
-              
-              // 确保编辑区域保持展开状态
+
               _isConceptExpanded = true;
               if (_currentKeyPointId != null) {
                 _isKeyPointsExpanded = true;
@@ -267,19 +253,16 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   // 插入Markdown格式
   void _insertMarkdownFormat(String format) {
     try {
-      // 确定当前使用的控制器
       final TextEditingController currentController = _currentKeyPointId != null
           ? _keyPointControllers[_currentKeyPointId]!
           : _contentController;
-      
-      // 保存当前编辑模式状态
+
       setState(() {
         _currentEditMode = format;
       });
-      
+
       MarkdownFormatter.insertFormat(currentController, format);
-      
-      // 在格式应用后重置为文本模式
+
       Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) {
           setState(() {
@@ -298,10 +281,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       SnackBar(
         content: Text(message),
         duration: const Duration(seconds: 2),
-        action: SnackBarAction(
-          label: '了解',
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: '了解', onPressed: () {}),
       ),
     );
   }
@@ -311,20 +291,12 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     setState(() {
       _isSaving = true;
     });
-  
-    // 收集所有关键知识点内容
-    final List<Map<String, String>> keyPointsData = _keyPoints
-        .where((kp) => kp.content.trim().isNotEmpty)
-        .map((kp) => {
-          'title': kp.title,
-          'content': kp.content,
-        })
-        .toList();
-  
+
+    final String fullMarkdown = _generateFullMarkdown();
+
     final bool success = await CardSaver.saveCard(
       title: _titleController.text,
-      content: _contentController.text,
-      keyPoints: keyPointsData,
+      fullMarkdown: fullMarkdown,
       saveDirectory: _saveDirectory,
       imageFiles: _imageFiles,
       showErrorDialog: _showErrorDialog,
@@ -334,7 +306,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       setState(() {
         _isSaving = false;
       });
-      
+
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('卡片保存成功')),
@@ -370,18 +342,12 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       ),
       body: Column(
         children: [
-          // 顶部区域：标题和保存位置
           _buildHeaderSection(),
-          
-          // 主体区域：左侧编辑，右侧预览
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 左侧编辑区
                 _buildEditorSection(),
-                
-                // 右侧预览区
                 _buildPreviewSection(),
               ],
             ),
@@ -390,7 +356,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isSaving ? null : _saveCard,
-        icon: _isSaving 
+        icon: _isSaving
             ? const SizedBox(
                 width: 20,
                 height: 20,
@@ -414,7 +380,6 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 卡片标题输入框
           TextField(
             controller: _titleController,
             decoration: const InputDecoration(
@@ -424,8 +389,6 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
             maxLength: 80,
           ),
           const SizedBox(height: 8),
-          
-          // 保存位置选择
           Row(
             children: [
               Expanded(
@@ -447,11 +410,11 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     );
   }
 
-  // 添加折叠状态控制变量
+  // 折叠状态变量
   bool _isConceptExpanded = true;
   bool _isKeyPointsExpanded = true;
-  Map<String, bool> _keyPointExpandedStates = {};
-  
+  final Map<String, bool> _keyPointExpandedStates = {};
+
   // 构建编辑区域
   Widget _buildEditorSection() {
     return Expanded(
@@ -459,14 +422,12 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
         controller: _scrollController,
         child: Column(
           children: [
-            // 整体概念部分
             Card(
               margin: const EdgeInsets.fromLTRB(16, 0, 8, 8),
               elevation: 4,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 整体概念标签 - 添加折叠功能
                   InkWell(
                     onTap: () {
                       setState(() {
@@ -477,96 +438,73 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                       child: Row(
                         children: [
-                          // 折叠/展开图标移到左侧
                           Padding(
                             padding: const EdgeInsets.only(right: 8.0),
                             child: SvgPicture.asset(
-                              _isConceptExpanded 
-                                ? 'assets/icons/expand_less.svg'
-                                : 'assets/icons/expand_more.svg',
+                              _isConceptExpanded
+                                  ? 'assets/icons/expand_less.svg'
+                                  : 'assets/icons/expand_more.svg',
                               width: 24,
                               height: 24,
                               colorFilter: ColorFilter.mode(
                                 Theme.of(context).colorScheme.primary,
-                                BlendMode.srcIn
+                                BlendMode.srcIn,
                               ),
                             ),
                           ),
-                          const Text('整体概念', 
-                            style: TextStyle(
-                              fontSize: 18, 
-                              fontWeight: FontWeight.bold
-                            ),
+                          const Text(
+                            '整体概念',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
-                          const Spacer(),
-                          // 当前编辑指示器
-                          if (_currentKeyPointId == null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Text('当前编辑', style: TextStyle(fontSize: 12)),
-                            ),
                         ],
                       ),
                     ),
                   ),
-                  
-                  // 使用AnimatedSize实现平滑的折叠/展开效果
                   AnimatedSize(
                     duration: const Duration(milliseconds: 300),
-                    child: _isConceptExpanded ? Column(
-                      children: [
-                        // Markdown编辑工具栏
-                        if (_currentKeyPointId == null)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: MarkdownToolbar(
-                              currentEditMode: _currentEditMode,
-                              onFormatSelected: _insertMarkdownFormat,
-                              onImageSelected: _selectImage,
-                            ),
-                          ),
-                        
-                        // 整体概念输入框
-                        // 在整体概念部分的GestureDetector中
-                        GestureDetector(
-                          onTap: () {
-                            _switchToConceptEditing(); // 使用新方法替代直接设置状态
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Container(
-                              height: 150,
-                              child: TextField(
-                                controller: _contentController,
-                                maxLines: null,
-                                decoration: const InputDecoration(
-                                  hintText: '在这里输入概念内容。支持文本和图片\n选中文字后点击上方按钮可应用粗体、斜体等格式',
-                                  border: OutlineInputBorder(),
+                    child: _isConceptExpanded
+                        ? Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: MarkdownToolbar(
+                                  currentEditMode: _currentEditMode,
+                                  onFormatSelected: _insertMarkdownFormat,
+                                  onImageSelected: _selectImage,
                                 ),
-                                expands: true,
                               ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ) : const SizedBox.shrink(),
+                              GestureDetector(
+                                onTap: _switchToConceptEditing,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Container(
+                                    height: 150,
+                                    child: TextField(
+                                      controller: _contentController,
+                                      maxLines: null,
+                                      expands: true,
+                                      decoration: const InputDecoration(
+                                        hintText:
+                                            '在这里输入概念内容。支持文本和图片\n选中文字后点击上方按钮可应用粗体、斜体等格式',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
                   ),
                 ],
               ),
             ),
-            
-            // 关键知识点部分
             Card(
               margin: const EdgeInsets.fromLTRB(16, 8, 8, 16),
               elevation: 4,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 关键知识点标签和添加按钮 - 添加折叠功能
                   InkWell(
                     onTap: () {
                       setState(() {
@@ -577,29 +515,25 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                       child: Row(
                         children: [
-                          // 折叠/展开图标移到左侧
                           Padding(
                             padding: const EdgeInsets.only(right: 8.0),
                             child: SvgPicture.asset(
-                              _isKeyPointsExpanded 
-                                ? 'assets/icons/expand_less.svg'
-                                : 'assets/icons/expand_more.svg',
+                              _isKeyPointsExpanded
+                                  ? 'assets/icons/expand_less.svg'
+                                  : 'assets/icons/expand_more.svg',
                               width: 24,
                               height: 24,
                               colorFilter: ColorFilter.mode(
                                 Theme.of(context).colorScheme.primary,
-                                BlendMode.srcIn
+                                BlendMode.srcIn,
                               ),
                             ),
                           ),
-                          const Text('关键知识点', 
-                            style: TextStyle(
-                              fontSize: 18, 
-                              fontWeight: FontWeight.bold
-                            ),
+                          const Text(
+                            '关键知识点',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           const Spacer(),
-                          // 添加按钮保持在右侧
                           IconButton(
                             icon: SvgPicture.asset(
                               'assets/icons/add_key_point.svg',
@@ -607,7 +541,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                               height: 24,
                               colorFilter: ColorFilter.mode(
                                 Theme.of(context).colorScheme.primary,
-                                BlendMode.srcIn
+                                BlendMode.srcIn,
                               ),
                             ),
                             tooltip: '添加关键知识点',
@@ -617,8 +551,6 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                       ),
                     ),
                   ),
-                  
-                  // 使用AnimatedSize实现平滑的折叠/展开效果
                   AnimatedSize(
                     duration: const Duration(milliseconds: 300),
                     child: _isKeyPointsExpanded ? _buildKeyPointsList() : const SizedBox.shrink(),
@@ -634,235 +566,214 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 提取关键知识点列表构建为单独方法
   Widget _buildKeyPointsList() {
+    if (_keyPoints.isEmpty) {
+      return const Center(child: Text('点击 + 添加关键知识点'));
+    }
+
     return Container(
-      constraints: BoxConstraints(
-        minHeight: 100,
-        maxHeight: _keyPoints.isEmpty ? 100 : 400,
-      ),
-      child: _keyPoints.isEmpty
-        ? const Center(child: Text('点击 + 添加关键知识点'))
-        : ListView.builder(
-            shrinkWrap: true,
-            itemCount: _keyPoints.length,
-            itemBuilder: (context, index) {
-              final keyPoint = _keyPoints[index];
-              final bool isSelected = _currentKeyPointId == keyPoint.id;
-              
-              // 确保每个知识点都有折叠状态
-              _keyPointExpandedStates.putIfAbsent(keyPoint.id, () => true);
-              final bool isExpanded = _keyPointExpandedStates[keyPoint.id]!;
-              
-              return Column(
-                children: [
-                  // 关键知识点标题栏
-                  ListTile(
-                    leading: IconButton(
+      constraints: const BoxConstraints(minHeight: 100, maxHeight: 400),
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: _keyPoints.length,
+        itemBuilder: (context, index) {
+          final keyPoint = _keyPoints[index];
+          final bool isSelected = _currentKeyPointId == keyPoint.id;
+
+          _keyPointExpandedStates.putIfAbsent(keyPoint.id, () => true);
+          final bool isExpanded = _keyPointExpandedStates[keyPoint.id]!;
+
+          return Column(
+            children: [
+              ListTile(
+                leading: IconButton(
+                  icon: SvgPicture.asset(
+                    isExpanded
+                        ? 'assets/icons/expand_less.svg'
+                        : 'assets/icons/expand_more.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      Theme.of(context).colorScheme.primary,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  tooltip: isExpanded ? '折叠' : '展开',
+                  onPressed: () {
+                    setState(() {
+                      _keyPointExpandedStates[keyPoint.id] = !isExpanded;
+                      if (!isExpanded && !isSelected) {
+                        _setCurrentKeyPoint(keyPoint.id);
+                      }
+                    });
+                  },
+                ),
+                title: Text(keyPoint.title),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
                       icon: SvgPicture.asset(
-                        isExpanded 
-                          ? 'assets/icons/expand_less.svg'
-                          : 'assets/icons/expand_more.svg',
+                        'assets/icons/remove_key_point.svg',
                         width: 24,
                         height: 24,
                         colorFilter: ColorFilter.mode(
-                          Theme.of(context).colorScheme.primary,
-                          BlendMode.srcIn
+                          Theme.of(context).colorScheme.error,
+                          BlendMode.srcIn,
                         ),
                       ),
-                      tooltip: isExpanded ? '折叠' : '展开',
-                      onPressed: () {
-                        setState(() {
-                          _keyPointExpandedStates[keyPoint.id] = !isExpanded;
-                          if (!isExpanded && !isSelected) {
-                            _setCurrentKeyPoint(keyPoint.id);
-                          }
-                        });
-                      },
+                      tooltip: '删除此知识点',
+                      onPressed: () => _deleteKeyPoint(keyPoint.id),
                     ),
-                    title: Text(keyPoint.title.isNotEmpty 
-                      ? keyPoint.title 
-                      : '知识点 ${index + 1}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isSelected)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text('当前编辑', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+                onTap: () {
+                  _setCurrentKeyPoint(keyPoint.id);
+                  if (!isExpanded) {
+                    setState(() {
+                      _keyPointExpandedStates[keyPoint.id] = true;
+                    });
+                  }
+                },
+                selected: isSelected,
+                selectedTileColor:
+                    Theme.of(context).colorScheme.primary.withOpacity(0.05),
+              ),
+              if (isSelected && isExpanded)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    children: [
+                      MarkdownToolbar(
+                        currentEditMode: _currentEditMode,
+                        onFormatSelected: _insertMarkdownFormat,
+                        onImageSelected: _selectImage,
+                      ),
+                      Container(
+                        height: 150,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: TextField(
+                          controller: _keyPointControllers[keyPoint.id],
+                          maxLines: null,
+                          expands: true,
+                          decoration: const InputDecoration(
+                            hintText: '输入关键知识点内容...',
+                            border: OutlineInputBorder(),
                           ),
-                        IconButton(
-                          icon: SvgPicture.asset(
-                            'assets/icons/remove_key_point.svg',
-                            width: 24,
-                            height: 24,
-                            colorFilter: ColorFilter.mode(
-                              Theme.of(context).colorScheme.error,
-                              BlendMode.srcIn
-                            ),
-                          ),
-                          tooltip: '删除此知识点',
-                          onPressed: () => _deleteKeyPoint(keyPoint.id),
                         ),
-                      ],
-                    ),
-                    onTap: () {
-                      _setCurrentKeyPoint(keyPoint.id);
-                      // 如果折叠了，则展开
-                      if (!isExpanded) {
-                        setState(() {
-                          _keyPointExpandedStates[keyPoint.id] = true;
-                        });
-                      }
-                    },
-                    selected: isSelected,
-                    selectedTileColor: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                      ),
+                    ],
                   ),
-                  
-                  // 如果是当前选中的知识点且已展开，显示编辑器
-                  if (isSelected && isExpanded)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Column(
-                        children: [
-                          // Markdown工具栏
-                          MarkdownToolbar(
-                            currentEditMode: _currentEditMode,
-                            onFormatSelected: _insertMarkdownFormat,
-                            onImageSelected: _selectImage,
-                          ),
-                          
-                          // 编辑框
-                          Container(
-                            height: 150,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            child: TextField(
-                              controller: _keyPointControllers[keyPoint.id],
-                              maxLines: null,
-                              decoration: const InputDecoration(
-                                hintText: '输入关键知识点内容...',
-                                border: OutlineInputBorder(),
-                              ),
-                              expands: true,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
-  
-  // 添加滚动到当前编辑区域的方法
+
+  // 滚动到当前编辑区域
   void _scrollToCurrentEditor() {
-    // 使用Future.delayed确保在布局完成后滚动
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      
-      // 获取当前编辑区域的位置
-      double targetPosition = 0;
-      
-      if (_currentKeyPointId == null) {
-        // 如果是编辑整体概念，滚动到顶部
-        targetPosition = 0;
-      } else {
-        // 如果是编辑关键知识点，找到对应的位置
-        final int index = _keyPoints.indexWhere((kp) => kp.id == _currentKeyPointId);
-        if (index != -1) {
-          // 估算位置：每个知识点标题高度约50，加上前面整体概念的高度
-          targetPosition = 200 + (index * 50);
-        }
-      }
-      
-      // 执行滚动，带有动画效果
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          targetPosition,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final BuildContext? context = this.context;
+      if (context == null || !_scrollController.hasClients) return;
+
+      final RenderBox box = context.findRenderObject() as RenderBox;
+      final Offset position = box.localToGlobal(Offset.zero);
+
+      _scrollController.animateTo(
+        position.dy.clamp(0, _scrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     });
   }
 
-
-
-// 构建预览区域
-Widget _buildPreviewSection() {
-  return Expanded(
-    child: Card(
-      margin: const EdgeInsets.fromLTRB(8, 0, 16, 16),
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+  // 构建预览区域
+  Widget _buildPreviewSection() {
+    return Expanded(
+      child: Card(
+        margin: const EdgeInsets.fromLTRB(8, 0, 16, 16),
+        elevation: 4,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 预览标题
-            Text(
-              '预览',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  SvgPicture.asset(
+                    'assets/icons/preview.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      Theme.of(context).colorScheme.primary,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '预览',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            
-            // 预览内容
             Expanded(
-              child: _buildPreviewContent(),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Markdown(
+                  data: _generateFullMarkdown(),
+                  styleSheet: MarkdownStyleSheet(
+                    h1: GoogleFonts.notoSans(fontSize: 24, fontWeight: FontWeight.bold),
+                    h2: GoogleFonts.notoSans(fontSize: 20, fontWeight: FontWeight.bold),
+                    h3: GoogleFonts.notoSans(fontSize: 18, fontWeight: FontWeight.bold),
+                    p: GoogleFonts.notoSans(fontSize: 16),
+                  ),
+                  imageBuilder: (uri, _, __) {
+                    if (uri.scheme == 'file') {
+                      return Image.file(File(uri.toFilePath()),
+                          fit: BoxFit.contain);
+                    }
+                    return Image.network(uri.toString(), fit: BoxFit.contain);
+                  },
+                ),
+              ),
             ),
           ],
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-// 构建预览内容
-Widget _buildPreviewContent() {
-  // 确定当前预览的内容
-  final String previewContent = _currentKeyPointId != null
-      ? _keyPoints.firstWhere((kp) => kp.id == _currentKeyPointId).content
-      : _contentController.text;
-  
-  return Markdown(
-    data: previewContent,
-    selectable: true,
-    styleSheet: MarkdownStyleSheet(
-      h1: GoogleFonts.notoSans(fontSize: 24, fontWeight: FontWeight.bold),
-      h2: GoogleFonts.notoSans(fontSize: 22, fontWeight: FontWeight.bold),
-      h3: GoogleFonts.notoSans(fontSize: 20, fontWeight: FontWeight.bold),
-      p: GoogleFonts.notoSans(fontSize: 16),
-      code: GoogleFonts.firaCode(
-        fontSize: 14,
-        backgroundColor: Colors.grey.shade200,
-      ),
-      codeblockDecoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(4),
-      ),
-    ),
-    imageBuilder: (uri, title, alt) {
-      // 处理本地文件路径
-      if (uri.scheme == 'file') {
-        return Image.file(
-          File(uri.toFilePath()),
-          fit: BoxFit.contain,
-        );
+  // 生成完整的Markdown内容
+  String _generateFullMarkdown() {
+    final StringBuffer markdown = StringBuffer();
+
+    // 添加标题
+    markdown.writeln('# ${_titleController.text}\n');
+
+    // 添加创建时间
+    markdown.writeln('> 创建时间：${DateTime.now().toString()}\n');
+
+    // 添加整体概念
+    if (_contentController.text.isNotEmpty) {
+      markdown.writeln('## 整体概念\n');
+      markdown.writeln('${_contentController.text}\n');
+    }
+
+    // 添加关键知识点
+    if (_keyPoints.isNotEmpty) {
+      markdown.writeln('## 关键知识点\n');
+
+      for (final keyPoint in _keyPoints) {
+        final String content = _keyPointControllers[keyPoint.id]?.text ?? '';
+        if (content.isNotEmpty) {
+          markdown.writeln('### ${keyPoint.title}\n');
+          markdown.writeln('$content\n');
+        }
       }
-      // 处理网络图片
-      return Image.network(
-        uri.toString(),
-        fit: BoxFit.contain,
-      );
-    },
-  );
-}
+    }
+
+    return markdown.toString();
+  }
 }
