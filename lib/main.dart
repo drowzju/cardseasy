@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lifelong_learning_cards/theme/app_theme.dart';
 import 'screens/home/home_screen.dart';
 
 void main() {
@@ -11,11 +12,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CardsEasy',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
+      title: '卡片易',
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      // 移除重复的 theme 定义
       home: const HomeScreen(),
     );
   }
