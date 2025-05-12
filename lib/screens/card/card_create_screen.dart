@@ -12,6 +12,7 @@ import '../../utils/image_handler.dart';
 import '../../utils/card_saver.dart';
 import '../../utils/dialog_utils.dart';
 import '../../widgets/markdown_toolbar.dart';
+import '../../widgets/key_point_list.dart'; // 添加这一行导入
 import '../../models/key_point.dart';
 
 class CardCreateScreen extends StatefulWidget {
@@ -528,120 +529,33 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                   ),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 300),
-                    child: _isKeyPointsExpanded ? _buildKeyPointsList() : const SizedBox.shrink(),
+                    child: _isKeyPointsExpanded 
+                        ? KeyPointList(
+                            keyPoints: _keyPoints,
+                            keyPointExpandedStates: _keyPointExpandedStates,
+                            keyPointControllers: _keyPointControllers,
+                            currentKeyPointId: _currentKeyPointId,
+                            currentEditMode: _currentEditMode,
+                            onKeyPointSelected: _setCurrentKeyPoint,
+                            onKeyPointDeleted: _deleteKeyPoint,
+                            onKeyPointToggleExpanded: (id) {
+                              setState(() {
+                                _keyPointExpandedStates[id] = !(_keyPointExpandedStates[id] ?? true);
+                                if (!(_keyPointExpandedStates[id] ?? true) && _currentKeyPointId != id) {
+                                  _setCurrentKeyPoint(id);
+                                }
+                              });
+                            },
+                            onFormatSelected: _insertMarkdownFormat,
+                            onImageSelected: _selectImage,
+                          )
+                        : const SizedBox.shrink(),
                   ),
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // 提取关键知识点列表构建为单独方法
-  Widget _buildKeyPointsList() {
-    if (_keyPoints.isEmpty) {
-      return const Center(child: Text('点击 + 添加关键知识点'));
-    }
-
-    return Container(
-      constraints: const BoxConstraints(minHeight: 100, maxHeight: 400),
-      child: ListView.builder(
-        shrinkWrap: true,
-        itemCount: _keyPoints.length,
-        itemBuilder: (context, index) {
-          final keyPoint = _keyPoints[index];
-          final bool isSelected = _currentKeyPointId == keyPoint.id;
-
-          _keyPointExpandedStates.putIfAbsent(keyPoint.id, () => true);
-          final bool isExpanded = _keyPointExpandedStates[keyPoint.id]!;
-
-          return Column(
-            children: [
-              ListTile(
-                leading: IconButton(
-                  icon: SvgPicture.asset(
-                    isExpanded
-                        ? 'assets/icons/expand_less.svg'
-                        : 'assets/icons/expand_more.svg',
-                    width: 24,
-                    height: 24,
-                    colorFilter: ColorFilter.mode(
-                      Theme.of(context).colorScheme.primary,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                  tooltip: isExpanded ? '折叠' : '展开',
-                  onPressed: () {
-                    setState(() {
-                      _keyPointExpandedStates[keyPoint.id] = !isExpanded;
-                      if (!isExpanded && !isSelected) {
-                        _setCurrentKeyPoint(keyPoint.id);
-                      }
-                    });
-                  },
-                ),
-                title: Text(keyPoint.title),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: SvgPicture.asset(
-                        'assets/icons/remove_key_point.svg',
-                        width: 24,
-                        height: 24,
-                        colorFilter: ColorFilter.mode(
-                          Theme.of(context).colorScheme.error,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                      tooltip: '删除此知识点',
-                      onPressed: () => _deleteKeyPoint(keyPoint.id),
-                    ),
-                  ],
-                ),
-                onTap: () {
-                  _setCurrentKeyPoint(keyPoint.id);
-                  if (!isExpanded) {
-                    setState(() {
-                      _keyPointExpandedStates[keyPoint.id] = true;
-                    });
-                  }
-                },
-                selected: isSelected,
-                selectedTileColor:
-                    Theme.of(context).colorScheme.primary.withOpacity(0.05),
-              ),
-              if (isSelected && isExpanded)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Column(
-                    children: [
-                      MarkdownToolbar(
-                        currentEditMode: _currentEditMode,
-                        onFormatSelected: _insertMarkdownFormat,
-                        onImageSelected: _selectImage,
-                      ),
-                      Container(
-                        height: 150,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        child: TextField(
-                          controller: _keyPointControllers[keyPoint.id],
-                          maxLines: null,
-                          expands: true,
-                          decoration: const InputDecoration(
-                            hintText: '输入关键知识点内容...',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          );
-        },
       ),
     );
   }
