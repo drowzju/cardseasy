@@ -323,7 +323,7 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
 }
 
 // 修改卡片预览屏幕
-class CardPreviewScreen extends StatelessWidget {
+class CardPreviewScreen extends StatefulWidget {
   final CardModel card;
   
   const CardPreviewScreen({
@@ -332,95 +332,235 @@ class CardPreviewScreen extends StatelessWidget {
   });
   
   @override
+  State<CardPreviewScreen> createState() => _CardPreviewScreenState();
+}
+
+class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTickerProviderStateMixin {
+  bool _isPreviewMode = true; // true为预览模式，false为自测模式
+  late TabController _tabController;
+  
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        setState(() {
+          _isPreviewMode = _tabController.index == 0;
+        });
+      }
+    });
+  }
+  
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+  
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(card.title),
+        title: Text(widget.card.title),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(
+              icon: Icon(Icons.preview),
+              text: '预览',
+            ),
+            Tab(
+              icon: Icon(Icons.quiz),
+              text: '自测',
+            ),
+          ],
+        ),
       ),
-      body: Row(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          Expanded(
-            child: Card(
-              margin: const EdgeInsets.all(16.0),
-              elevation: 4,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 预览区域标题栏
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
+          _buildPreviewTab(),
+          _buildSelfTestTab(),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildPreviewTab() {
+    return Row(
+      children: [
+        Expanded(
+          child: Card(
+            margin: const EdgeInsets.all(16.0),
+            elevation: 4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 预览区域标题栏
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.preview, size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        '预览',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // 预览内容
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.preview, size: 24),
-                        const SizedBox(width: 8),
+                        // 标题
                         Text(
-                          '预览',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          widget.card.title,
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Markdown内容
+                        MarkdownBody(
+                          data: widget.card.content,
+                          selectable: true,
+                          imageBuilder: (uri, title, alt) {
+                            try {
+                              final filePath = uri.toFilePath();
+                              return Image.file(
+                                File(filePath),
+                                errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.broken_image),
+                              );
+                            } catch (e) {
+                              return Text('图片加载失败: ${uri.path}');
+                            }
+                          },
+                          styleSheet: MarkdownStyleSheet(
+                            h1: Theme.of(context).textTheme.headlineMedium,
+                            h2: Theme.of(context).textTheme.titleLarge,
+                            h3: Theme.of(context).textTheme.titleMedium,
+                            p: Theme.of(context).textTheme.bodyLarge,
+                            code: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontFamily: 'monospace',
+                              backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                            ),
+                            blockquote: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.secondary,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Divider(height: 1),
-                  // 预览内容
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 标题
-                          Text(
-                            card.title,
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          // Markdown内容
-                          MarkdownBody(
-                            data: card.content,
-                            selectable: true,
-                            imageBuilder: (uri, title, alt) {
-                              try {
-                                final filePath = uri.toFilePath();
-                                return Image.file(
-                                  File(filePath),
-                                  errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.broken_image),
-                                );
-                              } catch (e) {
-                                return Text('图片加载失败: ${uri.path}');
-                              }
-                            },
-                            styleSheet: MarkdownStyleSheet(
-                              h1: Theme.of(context).textTheme.headlineMedium,
-                              h2: Theme.of(context).textTheme.titleLarge,
-                              h3: Theme.of(context).textTheme.titleMedium,
-                              p: Theme.of(context).textTheme.bodyLarge,
-                              code: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontFamily: 'monospace',
-                                backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
-                              ),
-                              blockquote: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.secondary,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildSelfTestTab() {
+    return Row(
+      children: [
+        Expanded(
+          child: Card(
+            margin: const EdgeInsets.all(16.0),
+            elevation: 4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 自测区域标题栏
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.quiz, size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        '自测模式',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // 自测内容
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 标题
+                        Text(
+                          widget.card.title,
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // 解析后的自测内容
+                        _buildSelfTestContent(widget.card.content),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildSelfTestContent(String markdownContent) {
+    // 这里我们需要解析Markdown内容，找出"关键知识点"和"理解与关联"等部分
+    // 暂时返回一个简单的示例
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildCollapsibleSection('关键知识点', '这里是关键知识点的内容...'),
+        const SizedBox(height: 16),
+        _buildCollapsibleSection('理解与关联', '这里是理解与关联的内容...'),
+      ],
+    );
+  }
+  
+  Widget _buildCollapsibleSection(String title, String content) {
+    return ExpansionTile(
+      title: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(content),
+        ),
+      ],
+      expandedAlignment: Alignment.topLeft,
+      childrenPadding: EdgeInsets.zero,
+      expandedCrossAxisAlignment: CrossAxisAlignment.start,
     );
   }
 }
