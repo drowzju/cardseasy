@@ -12,7 +12,9 @@ import '../../utils/image_handler.dart';
 import '../../utils/card_saver.dart';
 import '../../utils/dialog_utils.dart';
 import '../../widgets/markdown_toolbar.dart';
-import '../../widgets/key_point_list.dart'; // 添加这一行导入
+import '../../widgets/key_point_list.dart';
+import '../../widgets/key_points_header.dart';
+import '../../widgets/concept_editor.dart'; // 添加这一行导入
 import '../../models/key_point.dart';
 
 class CardCreateScreen extends StatefulWidget {
@@ -398,82 +400,18 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
         controller: _scrollController,
         child: Column(
           children: [
-            Card(
-              margin: const EdgeInsets.fromLTRB(16, 0, 8, 8),
-              elevation: 4,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  InkWell(
-                    onTap: () {
-                      setState(() {
-                        _isConceptExpanded = !_isConceptExpanded;
-                      });
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      child: Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: SvgPicture.asset(
-                              _isConceptExpanded
-                                  ? 'assets/icons/expand_less.svg'
-                                  : 'assets/icons/expand_more.svg',
-                              width: 24,
-                              height: 24,
-                              colorFilter: ColorFilter.mode(
-                                Theme.of(context).colorScheme.primary,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                          ),
-                          const Text(
-                            '整体概念',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 300),
-                    child: _isConceptExpanded
-                        ? Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                child: MarkdownToolbar(
-                                  currentEditMode: _currentEditMode,
-                                  onFormatSelected: _insertMarkdownFormat,
-                                  onImageSelected: _selectImage,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: _switchToConceptEditing,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Container(
-                                    height: 150,
-                                    child: TextField(
-                                      controller: _contentController,
-                                      maxLines: null,
-                                      expands: true,
-                                      decoration: const InputDecoration(
-                                        hintText:
-                                            '在这里输入概念内容。支持文本和图片\n选中文字后点击上方按钮可应用粗体、斜体等格式',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ],
-              ),
+            ConceptEditor(
+              isExpanded: _isConceptExpanded,
+              onToggleExpanded: () {
+                setState(() {
+                  _isConceptExpanded = !_isConceptExpanded;
+                });
+              },
+              contentController: _contentController,
+              currentEditMode: _currentEditMode,
+              onFormatSelected: _insertMarkdownFormat,
+              onImageSelected: _selectImage,
+              onTap: _switchToConceptEditing,
             ),
             Card(
               margin: const EdgeInsets.fromLTRB(16, 8, 8, 16),
@@ -481,51 +419,14 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  InkWell(
-                    onTap: () {
+                  KeyPointsHeader(
+                    isExpanded: _isKeyPointsExpanded,
+                    onToggleExpanded: () {
                       setState(() {
                         _isKeyPointsExpanded = !_isKeyPointsExpanded;
                       });
                     },
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                      child: Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: SvgPicture.asset(
-                              _isKeyPointsExpanded
-                                  ? 'assets/icons/expand_less.svg'
-                                  : 'assets/icons/expand_more.svg',
-                              width: 24,
-                              height: 24,
-                              colorFilter: ColorFilter.mode(
-                                Theme.of(context).colorScheme.primary,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                          ),
-                          const Text(
-                            '关键知识点',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            icon: SvgPicture.asset(
-                              'assets/icons/add_key_point.svg',
-                              width: 24,
-                              height: 24,
-                              colorFilter: ColorFilter.mode(
-                                Theme.of(context).colorScheme.primary,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                            tooltip: '添加关键知识点',
-                            onPressed: _addKeyPoint,
-                          ),
-                        ],
-                      ),
-                    ),
+                    onAddKeyPoint: _addKeyPoint,
                   ),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 300),
