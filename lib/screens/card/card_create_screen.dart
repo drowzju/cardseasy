@@ -65,6 +65,10 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // 初始化保存目录
+    _saveDirectory = widget.initialSaveDirectory;
+    
     _contentController.addListener(() {
       setState(() {
         // 触发重建以更新预览
@@ -408,6 +412,11 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 保存卡片
   Future<void> _saveCard() async {
+    // 添加卡片有效性检查
+    if (!_validateCard()) {
+      return;
+    }
+    
     setState(() {
       _isSaving = true;
     });
@@ -434,6 +443,34 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
         Navigator.pop(context);
       }
     }
+  }
+
+  // 添加卡片有效性检查
+  bool _validateCard() {
+    if (_titleController.text.trim().isEmpty) {
+      _showErrorDialog('请输入卡片标题');
+      return false;
+    }
+    
+    if (_saveDirectory == null) {
+      _showErrorDialog('请选择保存目录');
+      return false;
+    }
+    
+    // 检查标题是否包含非法字符
+    final RegExp illegalChars = RegExp(r'[<>:"/\\|?*]');
+    if (illegalChars.hasMatch(_titleController.text)) {
+      _showErrorDialog('标题包含非法字符: < > : " / \\ | ? *');
+      return false;
+    }
+    
+    // 检查内容是否为空
+    if (_contentController.text.trim().isEmpty && _keyPoints.isEmpty) {
+      _showErrorDialog('请添加卡片内容或至少一个关键知识点');
+      return false;
+    }
+    
+    return true;
   }
 
   // 显示错误对话框

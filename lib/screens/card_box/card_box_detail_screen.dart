@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:path/path.dart' as path;
 import '../../models/card_box.dart';
 import '../../models/card_model.dart';
 import '../../services/card_service.dart';
+import '../card/card_create_screen.dart';  // 添加导入
 
 class CardBoxDetailScreen extends StatefulWidget {
   final CardBox cardBox;
@@ -17,6 +20,8 @@ class CardBoxDetailScreen extends StatefulWidget {
 }
 
 class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
+  // 添加 CardService 实例
+  final CardService _cardService = CardService();
   List<CardModel> _cards = [];
   bool _isLoading = true;
   bool _isGridView = true; // 默认使用网格视图
@@ -33,9 +38,8 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
     });
     
     try {
-      // 这里假设 CardService 有一个方法可以获取卡片盒内的所有卡片
-      // 如果没有，您需要在 CardService 中添加相应的方法
-      final cards = await _getCardsInBox(widget.cardBox.path);
+      // 使用CardService获取卡片
+      final cards = await _cardService.getCardsInBox(widget.cardBox.path);
       setState(() {
         _cards = cards;
       });
@@ -48,43 +52,7 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
     }
   }
   
-  // 临时方法，用于获取卡片盒内的所有卡片
-  // 在实际开发中，这个方法应该放在 CardService 中
-  Future<List<CardModel>> _getCardsInBox(String boxPath) async {
-    final directory = Directory(boxPath);
-    final List<CardModel> cards = [];
-    
-    if (!await directory.exists()) {
-      return [];
-    }
-    
-    try {
-      await for (var entity in directory.list()) {
-        if (entity is Directory) {
-          final dirName = entity.path.split(RegExp(r'[/\\]')).last;
-          final mdFilePath = '${entity.path}/$dirName.md';
-          final mdFile = File(mdFilePath);
-          
-          if (await mdFile.exists()) {
-            // 读取 MD 文件内容
-            final content = await mdFile.readAsString();
-            // 创建卡片模型
-            final card = CardModel(
-              title: dirName,
-              content: content,
-              filePath: mdFilePath,
-            );
-            cards.add(card);
-          }
-        }
-      }
-    } catch (e) {
-      print('获取卡片失败: $e');
-    }
-    
-    return cards;
-  }
-  
+  // 删除临时方法，因为已经移到了CardService中
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -128,6 +96,12 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
               : _isGridView
                   ? _buildGridView()
                   : _buildListView(),
+      // 添加浮动操作按钮
+      floatingActionButton: FloatingActionButton(
+        onPressed: _createNewCard,
+        tooltip: '创建新卡片',
+        child: const Icon(Icons.add),
+      ),
     );
   }
   
@@ -220,7 +194,130 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
   }
   
   void _viewCard(CardModel card) {
-    // 在迭代二中实现卡片预览功能
-    _showErrorSnackBar('卡片预览功能将在下一次迭代中实现');
+    // 实现卡片预览功能
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CardPreviewScreen(card: card),
+      ),
+    );
+  }
+  
+  // 添加创建新卡片的方法
+  void _createNewCard() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CardCreateScreen(
+          initialSaveDirectory: widget.cardBox.path,
+        ),
+      ),
+    ).then((_) {
+      // 当从创建卡片页面返回时，刷新卡片列表
+      _loadCards();
+    });
+  }
+}
+
+// 修改卡片预览屏幕
+class CardPreviewScreen extends StatelessWidget {
+  final CardModel card;
+  
+  const CardPreviewScreen({
+    super.key,
+    required this.card,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(card.title),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      body: Row(
+        children: [
+          Expanded(
+            child: Card(
+              margin: const EdgeInsets.all(16.0),
+              elevation: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 预览区域标题栏
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.preview, size: 24),
+                        const SizedBox(width: 8),
+                        Text(
+                          '预览',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  // 预览内容
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 标题
+                          Text(
+                            card.title,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // Markdown内容
+                          MarkdownBody(
+                            data: card.content,
+                            selectable: true,
+                            imageBuilder: (uri, title, alt) {
+                              try {
+                                final filePath = uri.toFilePath();
+                                return Image.file(
+                                  File(filePath),
+                                  errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.broken_image),
+                                );
+                              } catch (e) {
+                                return Text('图片加载失败: ${uri.path}');
+                              }
+                            },
+                            styleSheet: MarkdownStyleSheet(
+                              h1: Theme.of(context).textTheme.headlineMedium,
+                              h2: Theme.of(context).textTheme.titleLarge,
+                              h3: Theme.of(context).textTheme.titleMedium,
+                              p: Theme.of(context).textTheme.bodyLarge,
+                              code: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontFamily: 'monospace',
+                                backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                              ),
+                              blockquote: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.secondary,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
