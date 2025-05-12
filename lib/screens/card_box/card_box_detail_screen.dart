@@ -336,8 +336,9 @@ class CardPreviewScreen extends StatefulWidget {
 }
 
 class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTickerProviderStateMixin {
-  bool _isPreviewMode = true; // true为预览模式，false为自测模式
+  bool _isPreviewMode = true;
   late TabController _tabController;
+  final Map<String, bool> _sectionVisibility = {};  // 用于存储每个章节的可见性状态
   
   @override
   void initState() {
@@ -532,35 +533,126 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
   }
   
   Widget _buildSelfTestContent(String markdownContent) {
-    // 这里我们需要解析Markdown内容，找出"关键知识点"和"理解与关联"等部分
-    // 暂时返回一个简单的示例
+    // 解析markdown内容，提取关键知识点和理解与关联部分
+    final sections = _parseSections(markdownContent);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildCollapsibleSection('关键知识点', '这里是关键知识点的内容...'),
-        const SizedBox(height: 16),
-        _buildCollapsibleSection('理解与关联', '这里是理解与关联的内容...'),
-      ],
+      children: sections.map((section) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCollapsibleSection(section.title, section.content),
+            const SizedBox(height: 16),
+          ],
+        );
+      }).toList(),
     );
   }
   
+  List<Section> _parseSections(String markdownContent) {
+    final List<Section> sections = [];
+    final lines = markdownContent.split('\n');
+    String currentTitle = '';
+    StringBuffer currentContent = StringBuffer();
+    
+    for (final line in lines) {
+      if (line.startsWith('## ')) {  // 二级标题作为章节标题
+        if (currentTitle.isNotEmpty) {
+          sections.add(Section(currentTitle, currentContent.toString().trim()));
+          currentContent.clear();
+        }
+        currentTitle = line.substring(3).trim();
+      } else if (currentTitle.isNotEmpty) {
+        currentContent.writeln(line);
+      }
+    }
+    
+    if (currentTitle.isNotEmpty) {
+      sections.add(Section(currentTitle, currentContent.toString().trim()));
+    }
+    
+    return sections;
+  }
+  
   Widget _buildCollapsibleSection(String title, String content) {
-    return ExpansionTile(
-      title: Text(
-        title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
+    // 确保每个标题都有对应的可见性状态
+    _sectionVisibility.putIfAbsent(title, () => false);
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 标题栏
+          InkWell(
+            onTap: () {
+              setState(() {
+                _sectionVisibility[title] = !_sectionVisibility[title]!;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(
+                    _sectionVisibility[title]! 
+                        ? Icons.keyboard_arrow_down 
+                        : Icons.keyboard_arrow_right,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(_sectionVisibility[title]! 
+                        ? Icons.visibility 
+                        : Icons.visibility_off),
+                    onPressed: () {
+                      setState(() {
+                        _sectionVisibility[title] = !_sectionVisibility[title]!;
+                      });
+                    },
+                    tooltip: _sectionVisibility[title]! ? '隐藏内容' : '显示内容',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // 内容区域
+          AnimatedCrossFade(
+            firstChild: Padding(
+              padding: const EdgeInsets.all(16),
+              child: MarkdownBody(
+                data: content,
+                selectable: true,
+                styleSheet: MarkdownStyleSheet(
+                  p: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            ),
+            secondChild: const SizedBox.shrink(),
+            crossFadeState: _sectionVisibility[title]! 
+                ? CrossFadeState.showFirst 
+                : CrossFadeState.showSecond,
+            duration: const Duration(milliseconds: 300),
+          ),
+        ],
       ),
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(content),
-        ),
-      ],
-      expandedAlignment: Alignment.topLeft,
-      childrenPadding: EdgeInsets.zero,
-      expandedCrossAxisAlignment: CrossAxisAlignment.start,
     );
   }
+}
+
+// 添加Section类用于存储章节信息
+class Section {
+  final String title;
+  final String content;
+  
+  Section(this.title, this.content);
 }
