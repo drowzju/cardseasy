@@ -652,41 +652,87 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  SvgPicture.asset(
-                    'assets/icons/preview.svg',
-                    width: 24,
-                    height: 24,
-                    colorFilter: ColorFilter.mode(
-                      Theme.of(context).colorScheme.primary,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   const Text(
                     '预览',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () {
+                      setState(() {
+                        // 触发重建以更新预览
+                      });
+                    },
+                    tooltip: '刷新预览',
                   ),
                 ],
               ),
             ),
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
-                child: Markdown(
-                  data: _generateFullMarkdown(),
-                  styleSheet: MarkdownStyleSheet(
-                    h1: GoogleFonts.notoSans(fontSize: 24, fontWeight: FontWeight.bold),
-                    h2: GoogleFonts.notoSans(fontSize: 20, fontWeight: FontWeight.bold),
-                    h3: GoogleFonts.notoSans(fontSize: 18, fontWeight: FontWeight.bold),
-                    p: GoogleFonts.notoSans(fontSize: 16),
-                  ),
-                  imageBuilder: (uri, _, __) {
-                    if (uri.scheme == 'file') {
-                      return Image.file(File(uri.toFilePath()),
-                          fit: BoxFit.contain);
-                    }
-                    return Image.network(uri.toString(), fit: BoxFit.contain);
-                  },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _titleController.text,
+                      style: const TextStyle(
+                        fontFamily: 'NotoSansSC',
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    MarkdownBody(
+                      data: _generateFullMarkdown(),
+                      selectable: true,
+                      styleSheet: MarkdownStyleSheet(
+                        h1: const TextStyle(
+                          fontFamily: 'NotoSansSC',
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        h2: const TextStyle(
+                          fontFamily: 'NotoSansSC',
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        h3: const TextStyle(
+                          fontFamily: 'NotoSansSC',
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        p: const TextStyle(
+                          fontFamily: 'NotoSansSC',
+                          fontSize: 16,
+                        ),
+                        em: const TextStyle(
+                          fontFamily: 'NotoSansSC',
+                          fontSize: 16,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        strong: const TextStyle(
+                          fontFamily: 'NotoSansSC',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        blockquote: const TextStyle(
+                          fontFamily: 'NotoSansSC',
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                        code: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 14,
+                          backgroundColor: Color(0xFFf7f7f7),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
