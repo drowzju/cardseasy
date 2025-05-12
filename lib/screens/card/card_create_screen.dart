@@ -10,6 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../utils/markdown_formatter.dart';
 import '../../utils/image_handler.dart';
 import '../../utils/card_saver.dart';
+import '../../utils/dialog_utils.dart';
 import '../../widgets/markdown_toolbar.dart';
 import '../../models/key_point.dart';
 
@@ -57,47 +58,11 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 显示标题输入对话框
   void _showTitleInputDialog() {
-    final TextEditingController dialogController = TextEditingController();
-    
-    showDialog(
+    DialogUtils.showTextInputDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('输入卡片标题'),
-        content: TextField(
-          controller: dialogController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: '请输入卡片标题',
-            border: OutlineInputBorder(),
-          ),
-          maxLength: 80,
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              Navigator.pop(context, value);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              final String title = dialogController.text;
-              if (title.trim().isNotEmpty) {
-                Navigator.pop(context, title);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('请输入标题')),
-                );
-              }
-            },
-            child: const Text('确定'),
-          ),
-        ],
-      ),
+      title: '输入卡片标题',
+      hintText: '请输入卡片标题',
+      maxLength: 80,
     ).then((title) {
       if (title == null || title.trim().isEmpty) {
         Navigator.pop(context); // 如果没有输入标题，返回上一页
@@ -132,46 +97,10 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 添加关键知识点
   void _addKeyPoint() {
-    final TextEditingController dialogController = TextEditingController();
-
-    showDialog(
+    DialogUtils.showTextInputDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('输入知识点标题'),
-        content: TextField(
-          controller: dialogController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: '请输入知识点标题',
-            border: OutlineInputBorder(),
-          ),
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              Navigator.pop(context, value);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              final String title = dialogController.text;
-              if (title.trim().isNotEmpty) {
-                Navigator.pop(context, title);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('请输入标题')),
-                );
-              }
-            },
-            child: const Text('确定'),
-          ),
-        ],
-      ),
+      title: '输入知识点标题',
+      hintText: '请输入知识点标题',
     ).then((title) {
       if (title != null && title.trim().isNotEmpty) {
         final String id = const Uuid().v4();
@@ -211,39 +140,27 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 删除关键知识点
   void _deleteKeyPoint(String id) {
-    showDialog(
+    DialogUtils.showConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除这个关键知识点吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
+      title: '确认删除',
+      content: '确定要删除这个关键知识点吗？',
+    ).then((confirmed) {
+      if (confirmed) {
+        final controller = _keyPointControllers[id];
+        if (controller != null) {
+          controller.dispose();
+          _keyPointControllers.remove(id);
+        }
 
-              final controller = _keyPointControllers[id];
-              if (controller != null) {
-                controller.dispose();
-                _keyPointControllers.remove(id);
-              }
+        setState(() {
+          _keyPoints.removeWhere((kp) => kp.id == id);
 
-              setState(() {
-                _keyPoints.removeWhere((kp) => kp.id == id);
-
-                if (_currentKeyPointId == id) {
-                  _currentKeyPointId = _keyPoints.isNotEmpty ? _keyPoints.first.id : null;
-                }
-              });
-            },
-            child: const Text('删除'),
-          ),
-        ],
-      ),
-    );
+          if (_currentKeyPointId == id) {
+            _currentKeyPointId = _keyPoints.isNotEmpty ? _keyPoints.first.id : null;
+          }
+        });
+      }
+    });
   }
 
   // 设置当前编辑的关键知识点
