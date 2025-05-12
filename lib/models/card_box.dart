@@ -11,8 +11,10 @@ class CardBox {
   
   // 从目录路径创建卡片盒
   factory CardBox.fromPath(String path) {
-    final pathObj = Uri.directory(path);
-    final name = pathObj.pathSegments.last;
+    // 修复：确保正确提取文件夹名称
+    final pathSegments = path.split(RegExp(r'[/\\]')); // 同时处理 / 和 \ 分隔符
+    final name = pathSegments.last.isEmpty ? pathSegments[pathSegments.length - 2] : pathSegments.last;
+    
     return CardBox(
       id: path,
       name: name,

@@ -114,6 +114,9 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _selectedCardBox = cardBox;
     });
+    
+    // 选中后直接进入卡片盒
+    _navigateToCreateCard();
   }
 
   // 创建新卡片
@@ -185,7 +188,6 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('卡片易 - 卡片盒'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // 移除右上角按钮
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -217,51 +219,48 @@ class _HomeScreenState extends State<HomeScreen> {
         
         return InkWell(
           onTap: () => _selectCardBox(cardBox),
-          child: Card(
-            elevation: isSelected ? 8 : 2,
-            color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.folder, size: 48), // 减小图标尺寸
-                const SizedBox(height: 4),
-                Text(
-                  cardBox.name,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  cardBox.path,
-                  style: const TextStyle(fontSize: 10),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20),
+          child: Tooltip(
+            message: cardBox.path, // 鼠标悬停时显示完整路径
+            child: Card(
+              elevation: isSelected ? 8 : 2,
+              color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
+              child: Stack(
+                children: [
+                  // 卡片盒主体内容 - 只显示文件夹名称
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        cardBox.name, // 只显示文件夹名称
+                        style: const TextStyle(
+                          fontSize: 16, 
+                          fontWeight: FontWeight.bold
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 3,
+                      ),
+                    ),
+                  ),
+                  
+                  // 右下角删除按钮 - 改为蓝色
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline, 
+                        size: 40,
+                        color: Colors.blue, // 改为蓝色，与添加卡片盒按钮一致
+                      ),
                       onPressed: () => _removeCardBox(cardBox),
                       tooltip: '移除卡片盒',
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(8),
                       constraints: const BoxConstraints(),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.note_add, size: 20),
-                      onPressed: () {
-                        _selectCardBox(cardBox);
-                        _navigateToCreateCard();
-                      },
-                      tooltip: '创建新卡片',
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -275,21 +274,23 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: _createCardBox,
       child: Card(
         elevation: 2,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.add_circle_outline, size: 48, color: Colors.blue),
-            const SizedBox(height: 8),
-            const Text(
-              '添加卡片盒',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.add_circle_outline, size: 48, color: Colors.blue),
+              const SizedBox(height: 8),
+              const Text(
+                '添加卡片盒',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
