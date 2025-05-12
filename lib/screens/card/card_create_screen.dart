@@ -16,6 +16,9 @@ import '../../widgets/key_point_list.dart';
 import '../../widgets/key_points_header.dart';
 import '../../widgets/concept_editor.dart'; // 添加这一行导入
 import '../../models/key_point.dart';
+import '../../models/understanding.dart';
+import '../../widgets/understanding_header.dart';
+import '../../widgets/understanding_list.dart';
 
 class CardCreateScreen extends StatefulWidget {
   const CardCreateScreen({super.key});
@@ -37,6 +40,16 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   final Map<String, TextEditingController> _keyPointControllers = {};
   // 当前编辑的关键知识点ID
   String? _currentKeyPointId;
+
+  // 理解与关联列表
+  final List<Understanding> _understandings = [];
+  // 理解与关联控制器映射
+  final Map<String, TextEditingController> _understandingControllers = {};
+  // 当前编辑的理解与关联ID
+  String? _currentUnderstandingId;
+  // 理解与关联折叠状态
+  bool _isUnderstandingExpanded = true;
+  final Map<String, bool> _understandingExpandedStates = {};
 
   // 当前编辑模式
   String _currentEditMode = 'text'; // 'text', 'bold', 'italic', 'heading', 'list'
@@ -89,6 +102,11 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
     // 释放所有关键知识点控制器
     for (var controller in _keyPointControllers.values) {
+      controller.dispose();
+    }
+
+    // 释放所有理解与关联控制器
+    for (var controller in _understandingControllers.values) {
       controller.dispose();
     }
 
@@ -170,6 +188,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   void _setCurrentKeyPoint(String id) {
     setState(() {
       _currentKeyPointId = id;
+      _currentUnderstandingId = null; // 清除理解与关联选择
       _currentEditMode = 'text';
 
       _keyPointExpandedStates[id] = true;
@@ -179,10 +198,93 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     });
   }
 
+  // 添加理解与关联
+  void _addUnderstanding() {
+    DialogUtils.showTextInputDialog(
+      context: context,
+      title: '输入理解与关联标题',
+      hintText: '请输入理解与关联标题',
+    ).then((title) {
+      if (title != null && title.trim().isNotEmpty) {
+        final String id = const Uuid().v4();
+        final understanding = Understanding(id: id, title: title);
+        final controller = TextEditingController();
+
+        controller.addListener(() {
+          final int index = _understandings.indexWhere((u) => u.id == id);
+          if (index != -1) {
+            setState(() {
+              _understandings[index].content = controller.text;
+            });
+          }
+        });
+
+        setState(() {
+          _understandings.add(understanding);
+          _understandingControllers[id] = controller;
+          _currentUnderstandingId = id;
+          _isUnderstandingExpanded = true;
+          _understandingExpandedStates[id] = true;
+        });
+
+        // 添加延迟以确保布局已更新
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    });
+  }
+
+  // 删除理解与关联
+  void _deleteUnderstanding(String id) {
+    DialogUtils.showConfirmDialog(
+      context: context,
+      title: '确认删除',
+      content: '确定要删除这个理解与关联吗？',
+    ).then((confirmed) {
+      if (confirmed) {
+        final controller = _understandingControllers[id];
+        if (controller != null) {
+          controller.dispose();
+          _understandingControllers.remove(id);
+        }
+
+        setState(() {
+          _understandings.removeWhere((u) => u.id == id);
+
+          if (_currentUnderstandingId == id) {
+            _currentUnderstandingId = _understandings.isNotEmpty ? _understandings.first.id : null;
+          }
+        });
+      }
+    });
+  }
+
+  // 设置当前编辑的理解与关联
+  void _setCurrentUnderstanding(String id) {
+    setState(() {
+      _currentUnderstandingId = id;
+      _currentKeyPointId = null; // 清除关键知识点选择
+      _currentEditMode = 'text';
+
+      _understandingExpandedStates[id] = true;
+      _isUnderstandingExpanded = true;
+
+      _scrollToCurrentEditor();
+    });
+  }
+
   // 切换到整体概念编辑
   void _switchToConceptEditing() {
     setState(() {
       _currentKeyPointId = null;
+      _currentUnderstandingId = null;
       _currentEditMode = 'text';
       _isConceptExpanded = true;
       _scrollToCurrentEditor();
@@ -208,9 +310,15 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     _isSelectingImage = true;
 
     try {
-      final TextEditingController currentController = _currentKeyPointId != null
-          ? _keyPointControllers[_currentKeyPointId]!
-          : _contentController;
+      TextEditingController currentController;
+      
+      if (_currentKeyPointId != null) {
+        currentController = _keyPointControllers[_currentKeyPointId]!;
+      } else if (_currentUnderstandingId != null) {
+        currentController = _understandingControllers[_currentUnderstandingId]!;
+      } else {
+        currentController = _contentController;
+      }
 
       await ImageHandler.selectAndProcessImage(
         contentController: currentController,
@@ -229,6 +337,10 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                 _isKeyPointsExpanded = true;
                 _keyPointExpandedStates[_currentKeyPointId!] = true;
               }
+              if (_currentUnderstandingId != null) {
+                _isUnderstandingExpanded = true;
+                _understandingExpandedStates[_currentUnderstandingId!] = true;
+              }
             });
           }
         },
@@ -245,9 +357,15 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   // 插入Markdown格式
   void _insertMarkdownFormat(String format) {
     try {
-      final TextEditingController currentController = _currentKeyPointId != null
-          ? _keyPointControllers[_currentKeyPointId]!
-          : _contentController;
+      TextEditingController currentController;
+      
+      if (_currentKeyPointId != null) {
+        currentController = _keyPointControllers[_currentKeyPointId]!;
+      } else if (_currentUnderstandingId != null) {
+        currentController = _understandingControllers[_currentUnderstandingId]!;
+      } else {
+        currentController = _contentController;
+      }
 
       setState(() {
         _currentEditMode = format;
@@ -455,6 +573,49 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                 ],
               ),
             ),
+            // 添加理解与关联卡片
+            Card(
+              margin: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+              elevation: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  UnderstandingHeader(
+                    isExpanded: _isUnderstandingExpanded,
+                    onToggleExpanded: () {
+                      setState(() {
+                        _isUnderstandingExpanded = !_isUnderstandingExpanded;
+                      });
+                    },
+                    onAddUnderstanding: _addUnderstanding,
+                  ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    child: _isUnderstandingExpanded 
+                        ? UnderstandingList(
+                            understandings: _understandings,
+                            understandingExpandedStates: _understandingExpandedStates,
+                            understandingControllers: _understandingControllers,
+                            currentUnderstandingId: _currentUnderstandingId,
+                            currentEditMode: _currentEditMode,
+                            onUnderstandingSelected: _setCurrentUnderstanding,
+                            onUnderstandingDeleted: _deleteUnderstanding,
+                            onUnderstandingToggleExpanded: (id) {
+                              setState(() {
+                                _understandingExpandedStates[id] = !(_understandingExpandedStates[id] ?? true);
+                                if (!(_understandingExpandedStates[id] ?? true) && _currentUnderstandingId != id) {
+                                  _setCurrentUnderstanding(id);
+                                }
+                              });
+                            },
+                            onFormatSelected: _insertMarkdownFormat,
+                            onImageSelected: _selectImage,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -542,23 +703,46 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     // 添加标题
     markdown.writeln('# ${_titleController.text}\n');
     
-    // 添加整体概念
+    // 添加整体概念章节（无论是否有内容）
+    markdown.writeln('# 整体概念\n');
     if (_contentController.text.isNotEmpty) {
-      markdown.writeln('# 整体概念\n');
       markdown.writeln('${_contentController.text}\n');
+    } else {
+      markdown.writeln('*暂无整体概念内容*\n');
     }
     
-    // 添加关键知识点
+    // 添加关键知识点章节（无论是否有内容）
+    markdown.writeln('# 关键知识点\n');
+    
     if (_keyPoints.isNotEmpty) {
-      markdown.writeln('# 关键知识点\n');
-      
       for (final keyPoint in _keyPoints) {
         final String content = _keyPointControllers[keyPoint.id]?.text ?? '';
+        markdown.writeln('## ${keyPoint.title}\n');
         if (content.isNotEmpty) {
-          markdown.writeln('## ${keyPoint.title}\n');
           markdown.writeln('$content\n');
+        } else {
+          markdown.writeln('*暂无内容*\n');
         }
       }
+    } else {
+      markdown.writeln('*暂无关键知识点*\n');
+    }
+    
+    // 添加理解与关联章节（无论是否有内容）
+    markdown.writeln('# 理解与关联\n');
+    
+    if (_understandings.isNotEmpty) {
+      for (final understanding in _understandings) {
+        final String content = _understandingControllers[understanding.id]?.text ?? '';
+        markdown.writeln('## ${understanding.title}\n');
+        if (content.isNotEmpty) {
+          markdown.writeln('$content\n');
+        } else {
+          markdown.writeln('*暂无内容*\n');
+        }
+      }
+    } else {
+      markdown.writeln('*暂无理解与关联内容*\n');
     }
     
     return markdown.toString();

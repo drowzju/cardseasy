@@ -4,12 +4,13 @@ import 'markdown_toolbar.dart';
 
 class ConceptEditor extends StatelessWidget {
   final bool isExpanded;
-  final Function() onToggleExpanded;
+  final VoidCallback onToggleExpanded;
   final TextEditingController contentController;
   final String currentEditMode;
   final Function(String) onFormatSelected;
   final VoidCallback onImageSelected;
   final VoidCallback onTap;
+  final String? tooltip; // 添加提示文本参数
 
   const ConceptEditor({
     super.key,
@@ -20,12 +21,13 @@ class ConceptEditor extends StatelessWidget {
     required this.onFormatSelected,
     required this.onImageSelected,
     required this.onTap,
+    this.tooltip, // 添加提示文本参数
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+      margin: const EdgeInsets.fromLTRB(16, 16, 8, 16),
       elevation: 4,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,7 +35,7 @@ class ConceptEditor extends StatelessWidget {
           InkWell(
             onTap: onToggleExpanded,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
                 children: [
                   Padding(
@@ -54,6 +56,18 @@ class ConceptEditor extends StatelessWidget {
                     '整体概念',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
+                  if (tooltip != null) // 添加提示图标
+                    Tooltip(
+                      message: tooltip!,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -61,36 +75,31 @@ class ConceptEditor extends StatelessWidget {
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
             child: isExpanded
-                ? Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: MarkdownToolbar(
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        MarkdownToolbar(
                           currentEditMode: currentEditMode,
                           onFormatSelected: onFormatSelected,
                           onImageSelected: onImageSelected,
                         ),
-                      ),
-                      GestureDetector(
-                        onTap: onTap,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Container(
-                            height: 150,
-                            child: TextField(
-                              controller: contentController,
-                              maxLines: null,
-                              expands: true,
-                              decoration: const InputDecoration(
-                                hintText:
-                                    '在这里输入概念内容。支持文本和图片\n选中文字后点击上方按钮可应用粗体、斜体等格式',
-                                border: OutlineInputBorder(),
-                              ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: contentController,
+                          maxLines: null,
+                          minLines: 5,
+                          decoration: InputDecoration(
+                            hintText: '输入整体概念...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
+                          onTap: onTap,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   )
                 : const SizedBox.shrink(),
           ),
