@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../models/card_box.dart';
 import '../../services/card_box_service.dart';
 import '../card/card_create_screen.dart';
+import '../card_box/card_box_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -115,11 +116,16 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedCardBox = cardBox;
     });
     
-    // 选中后直接进入卡片盒
-    _navigateToCreateCard();
+    // 进入卡片盒详情页面
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CardBoxDetailScreen(cardBox: cardBox),
+      ),
+    );
   }
 
-  // 创建新卡片
+  // 创建新卡片 - 这个方法可以保留，但不再直接从主界面调用
   void _navigateToCreateCard() {
     if (_selectedCardBox == null) {
       _showSnackBar('请先选择一个卡片盒');
