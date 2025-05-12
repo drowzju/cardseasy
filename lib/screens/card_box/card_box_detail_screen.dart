@@ -206,12 +206,12 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
 
   Widget _buildGridView() {
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(4),  // 进一步减少内边距
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        childAspectRatio: 1,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+        crossAxisCount: 8,  // 每行显示8张卡片
+        childAspectRatio: 0.9,  // 调整宽高比
+        crossAxisSpacing: 4,  // 减少卡片间水平间距
+        mainAxisSpacing: 4,  // 减少卡片间垂直间距
       ),
       itemCount: _filteredCards.length,
       itemBuilder: (context, index) {
@@ -221,16 +221,50 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
     );
   }
 
+  Widget _buildCardItem(CardModel card) {
+    return InkWell(
+      onTap: () => _viewCard(card),
+      child: Card(
+        elevation: 2,  // 恢复默认阴影
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.note,
+              size: 40,  // 适当放大图标
+              color: Colors.blue,
+            ),
+            const SizedBox(height: 8),  // 增加间距
+            Text(
+              card.title,
+              style: const TextStyle(
+                fontSize: 14,  // 适当放大字体
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
   Widget _buildListView() {
     return ListView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(4),  // 减少内边距
       itemCount: _filteredCards.length,
       itemBuilder: (context, index) {
         final card = _filteredCards[index];
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),  // 减少边距
           child: ListTile(
-            title: Text(card.title),
+            dense: true,  // 启用紧凑模式
+            title: Text(
+              card.title,
+              style: const TextStyle(fontSize: 14),  // 减小字体大小
+            ),
             subtitle: Text('点击查看详情'),
             leading: const Icon(
               Icons.note,
@@ -258,36 +292,6 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
           const SizedBox(height: 8),
           const Text('在此目录中创建子文件夹作为卡片'),
         ],
-      ),
-    );
-  }
-  
-  Widget _buildCardItem(CardModel card) {
-    return InkWell(
-      onTap: () => _viewCard(card),
-      child: Card(
-        elevation: 2,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.note,
-              size: 48,
-              color: Colors.blue,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              card.title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-            ),
-          ],
-        ),
       ),
     );
   }
