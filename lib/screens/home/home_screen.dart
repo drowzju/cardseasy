@@ -21,6 +21,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadCardBoxes();
+    // 添加窗口最大化代码
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maximizeWindow();
+    });
+  }
+
+  // 窗口最大化方法
+  void _maximizeWindow() {
+    // Flutter Web或Desktop平台可以使用window对象
+    // 对于移动平台，此方法不会有效果
   }
 
   // 加载卡片盒列表
@@ -175,49 +185,11 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('卡片易 - 卡片盒'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _createCardBox,
-            tooltip: '添加卡片盒',
-          ),
-          IconButton(
-            icon: const Icon(Icons.note_add),
-            onPressed: _navigateToCreateCard,
-            tooltip: '创建新卡片',
-          ),
-        ],
+        // 移除右上角按钮
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _cardBoxes.isEmpty
-              ? _buildEmptyState()
-              : _buildCardBoxGrid(),
-    );
-  }
-
-  // 构建空状态提示
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.inbox, size: 80, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
-            '没有卡片盒',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text('点击右上角的"+"按钮添加卡片盒'),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _createCardBox,
-            icon: const Icon(Icons.add),
-            label: const Text('添加卡片盒'),
-          ),
-        ],
-      ),
+          : _buildCardBoxGrid(),
     );
   }
 
@@ -226,14 +198,21 @@ class _HomeScreenState extends State<HomeScreen> {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 1,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+        crossAxisCount: 5, // 增加列数，使卡片盒变小
+        childAspectRatio: 0.8, // 调整宽高比
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
       ),
-      itemCount: _cardBoxes.length,
+      // 添加1是为了在第一个位置放置添加按钮
+      itemCount: _cardBoxes.length + 1,
       itemBuilder: (context, index) {
-        final cardBox = _cardBoxes[index];
+        // 第一个位置是添加按钮
+        if (index == 0) {
+          return _buildAddCardBoxButton();
+        }
+        
+        // 实际卡片盒索引需要减1
+        final cardBox = _cardBoxes[index - 1];
         final isSelected = _selectedCardBox?.id == cardBox.id;
         
         return InkWell(
@@ -244,36 +223,41 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.folder, size: 64),
-                const SizedBox(height: 8),
+                const Icon(Icons.folder, size: 48), // 减小图标尺寸
+                const SizedBox(height: 4),
                 Text(
                   cardBox.name,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   cardBox.path,
-                  style: const TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: 10),
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.delete_outline),
+                      icon: const Icon(Icons.delete_outline, size: 20),
                       onPressed: () => _removeCardBox(cardBox),
                       tooltip: '移除卡片盒',
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.note_add),
+                      icon: const Icon(Icons.note_add, size: 20),
                       onPressed: () {
                         _selectCardBox(cardBox);
                         _navigateToCreateCard();
                       },
                       tooltip: '创建新卡片',
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
@@ -282,6 +266,32 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       },
+    );
+  }
+
+  // 构建添加卡片盒按钮
+  Widget _buildAddCardBoxButton() {
+    return InkWell(
+      onTap: _createCardBox,
+      child: Card(
+        elevation: 2,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.add_circle_outline, size: 48, color: Colors.blue),
+            const SizedBox(height: 8),
+            const Text(
+              '添加卡片盒',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
