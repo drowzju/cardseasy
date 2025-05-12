@@ -21,7 +21,12 @@ import '../../widgets/understanding_header.dart';
 import '../../widgets/understanding_list.dart';
 
 class CardCreateScreen extends StatefulWidget {
-  const CardCreateScreen({super.key});
+  final String? initialSaveDirectory;
+  
+  const CardCreateScreen({
+    super.key,
+    this.initialSaveDirectory,
+  });
 
   @override
   State<CardCreateScreen> createState() => _CardCreateScreenState();
@@ -70,6 +75,11 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showTitleInputDialog();
     });
+    
+    // 设置初始保存目录
+    if (widget.initialSaveDirectory != null) {
+      _saveDirectory = widget.initialSaveDirectory;
+    }
   }
 
   // 显示标题输入对话框
