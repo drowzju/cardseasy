@@ -8,6 +8,7 @@ import '../../utils/card_parser.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/key_point.dart';
 import '../../models/understanding.dart';
+import 'package:path/path.dart' as path;
 
 class CardPreviewScreen extends StatefulWidget {
   final CardModel card;
@@ -554,7 +555,7 @@ void _editCard() {
     context,
     MaterialPageRoute(
       builder: (context) => CardCreateScreen(
-        initialSaveDirectory: widget.card.filePath,
+        initialSaveDirectory: path.dirname(widget.card.filePath),
         initialTitle: widget.card.title,
         initialContent: conceptContent,        
         initialKeyPoints: keyPoints,

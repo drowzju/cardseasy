@@ -23,10 +23,10 @@ class CardSaver {
     }
 
     try {
-      // 创建卡片目录
+      // 创建卡片目录         
       final String cardDirName = _sanitizeFileName(title);
       final String cardDirPath = path.join(saveDirectory, cardDirName);
-      final Directory cardDir = Directory(cardDirPath);
+      final Directory cardDir = Directory(cardDirPath);      
 
       if (!await cardDir.exists()) {
         await cardDir.create(recursive: true);

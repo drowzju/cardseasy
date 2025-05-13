@@ -478,7 +478,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('卡片保存成功')),
           );
-          Navigator.pop(context);
+
         }
       }
     } catch (e) {
