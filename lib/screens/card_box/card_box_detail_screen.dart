@@ -533,104 +533,87 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
   }
   
   Widget _buildSelfTestContent(String markdownContent) {
-    // 解析markdown内容，提取关键知识点和理解与关联部分
+    // 解析markdown内容，提取各部分内容
     final sections = _parseSections(markdownContent);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: sections.map((section) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildCollapsibleSection(section.title, section.content),
-            const SizedBox(height: 16),
-          ],
-        );
-      }).toList(),
+      children: [
+        // 整体概念区域
+        _buildConceptSection(sections),
+        
+        const SizedBox(height: 16),
+        
+        // 关键知识点区域
+        _buildPointsSection(sections, '关键知识点'),
+        
+        const SizedBox(height: 16),
+        
+        // 理解与关联区域
+        _buildPointsSection(sections, '理解与关联'),
+      ],
     );
   }
   
-  List<Section> _parseSections(String markdownContent) {
-    final List<Section> sections = [];
-    final lines = markdownContent.split('\n');
-    String currentTitle = '';
-    StringBuffer currentContent = StringBuffer();
+  // 构建整体概念部分
+  Widget _buildConceptSection(List<Section> sections) {
+    // 查找整体概念部分
+    final conceptSection = sections.firstWhere(
+      (s) => s.title == '整体概念',
+      orElse: () => Section(title: '整体概念', content: '', level: 1),
+    );
     
-    for (final line in lines) {
-      if (line.startsWith('## ')) {  // 二级标题作为章节标题
-        if (currentTitle.isNotEmpty) {
-          sections.add(Section(currentTitle, currentContent.toString().trim()));
-          currentContent.clear();
-        }
-        currentTitle = line.substring(3).trim();
-      } else if (currentTitle.isNotEmpty) {
-        currentContent.writeln(line);
-      }
-    }
+    // 确保整体概念有对应的可见性状态
+    _sectionVisibility.putIfAbsent('整体概念', () => true); // 默认展开
     
-    if (currentTitle.isNotEmpty) {
-      sections.add(Section(currentTitle, currentContent.toString().trim()));
-    }
-    
-    return sections;
-  }
-  
-  Widget _buildCollapsibleSection(String title, String content) {
-    // 确保每个标题都有对应的可见性状态
-    _sectionVisibility.putIfAbsent(title, () => false);
-    
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300, width: 1.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标题栏
+          // 整体概念标题栏
           InkWell(
             onTap: () {
               setState(() {
-                _sectionVisibility[title] = !_sectionVisibility[title]!;
+                _sectionVisibility['整体概念'] = !_sectionVisibility['整体概念']!;
               });
             },
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+              ),
               child: Row(
                 children: [
                   Icon(
-                    _sectionVisibility[title]! 
+                    _sectionVisibility['整体概念']! 
                         ? Icons.keyboard_arrow_down 
                         : Icons.keyboard_arrow_right,
-                    size: 24,
+                    color: Colors.purple.shade700,
                   ),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Text(
+                    '整体概念',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple.shade700,
                     ),
-                  ),
-                  IconButton(
-                    icon: Icon(_sectionVisibility[title]! 
-                        ? Icons.visibility 
-                        : Icons.visibility_off),
-                    onPressed: () {
-                      setState(() {
-                        _sectionVisibility[title] = !_sectionVisibility[title]!;
-                      });
-                    },
-                    tooltip: _sectionVisibility[title]! ? '隐藏内容' : '显示内容',
                   ),
                 ],
               ),
             ),
           ),
-          // 内容区域
+          // 整体概念内容
           AnimatedCrossFade(
             firstChild: Padding(
               padding: const EdgeInsets.all(16),
               child: MarkdownBody(
-                data: content,
+                data: conceptSection.content,
                 selectable: true,
                 styleSheet: MarkdownStyleSheet(
                   p: Theme.of(context).textTheme.bodyLarge,
@@ -638,7 +621,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
               ),
             ),
             secondChild: const SizedBox.shrink(),
-            crossFadeState: _sectionVisibility[title]! 
+            crossFadeState: _sectionVisibility['整体概念']! 
                 ? CrossFadeState.showFirst 
                 : CrossFadeState.showSecond,
             duration: const Duration(milliseconds: 300),
@@ -647,12 +630,243 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
       ),
     );
   }
+  
+  // 构建知识点或理解关联部分
+  Widget _buildPointsSection(List<Section> sections, String sectionTitle) {
+    // 查找该部分下的所有子条目
+    final subSections = sections.where((s) => 
+        s.parentTitle == sectionTitle && s.level == 2).toList();
+    
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300, width: 1.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 标题栏
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.bookmark,
+                  color: sectionTitle == '关键知识点' 
+                      ? Colors.blue.shade700 
+                      : Colors.green.shade700,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  sectionTitle,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: sectionTitle == '关键知识点' 
+                        ? Colors.blue.shade700 
+                        : Colors.green.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // 子条目列表
+          if (subSections.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                '暂无内容',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                children: subSections.map((section) => 
+                  _buildSubSection(section)).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+  
+  // 构建子条目
+  Widget _buildSubSection(Section section) {
+    // 确保每个子条目都有对应的可见性状态
+    _sectionVisibility.putIfAbsent(section.title, () => false); // 默认隐藏
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        children: [
+          // 子条目标题栏
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    section.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    _sectionVisibility[section.title]! 
+                        ? Icons.visibility 
+                        : Icons.visibility_off,
+                    color: _sectionVisibility[section.title]! 
+                        ? Colors.blue.shade600 
+                        : Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _sectionVisibility[section.title] = !_sectionVisibility[section.title]!;
+                    });
+                  },
+                  tooltip: _sectionVisibility[section.title]! ? '隐藏内容' : '显示内容',
+                ),
+              ],
+            ),
+          ),
+          // 内容区域
+          AnimatedCrossFade(
+            firstChild: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(5),
+                ),
+              ),
+              child: MarkdownBody(
+                data: section.content,
+                selectable: true,
+                styleSheet: MarkdownStyleSheet(
+                  p: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            ),
+            secondChild: const SizedBox.shrink(),
+            crossFadeState: _sectionVisibility[section.title]!
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            duration: const Duration(milliseconds: 200),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // 获取不同部分的颜色
+  Color _getSectionColor(String title) {
+    switch (title) {
+      case '整体概念':
+        return Colors.purple.shade700;
+      case '关键知识点':
+        return Colors.blue.shade700;
+      case '理解与关联':
+        return Colors.green.shade700;
+      default:
+        return Colors.grey.shade700;
+    }
+  }
+  
+  List<Section> _parseSections(String markdownContent) {
+    final List<Section> sections = [];
+    String currentParentTitle = '';
+    String currentTitle = '';
+    int currentLevel = 0;
+    StringBuffer currentContent = StringBuffer();
+    
+    // 按行分割Markdown内容
+    final lines = markdownContent.split('\n');
+    
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      
+      if (line.startsWith('# ')) {  // 一级标题
+        // 保存之前的部分（如果有）
+        if (currentTitle.isNotEmpty) {
+          sections.add(Section(
+            title: currentTitle, 
+            content: currentContent.toString().trim(),
+            parentTitle: currentParentTitle,
+            level: currentLevel,
+          ));
+          currentContent.clear();
+        }
+        
+        // 设置新的一级标题
+        currentTitle = line.substring(2).trim();
+        currentParentTitle = '';  // 一级标题没有父标题
+        currentLevel = 1;
+      } else if (line.startsWith('## ')) {  // 二级标题
+        // 保存之前的部分（如果有）
+        if (currentTitle.isNotEmpty) {
+          sections.add(Section(
+            title: currentTitle, 
+            content: currentContent.toString().trim(),
+            parentTitle: currentParentTitle,
+            level: currentLevel,
+          ));
+          currentContent.clear();
+        }
+        
+        // 设置新的二级标题
+        currentTitle = line.substring(3).trim();
+        
+        // 查找最近的一级标题作为父标题
+        for (int j = sections.length - 1; j >= 0; j--) {
+          if (sections[j].level == 1) {
+            currentParentTitle = sections[j].title;
+            break;
+          }
+        }
+        
+        currentLevel = 2;
+      } else {
+        // 将内容行添加到当前内容中
+        currentContent.writeln(line);
+      }
+    }
+    
+    // 添加最后一个部分（如果有）
+    if (currentTitle.isNotEmpty) {
+      sections.add(Section(
+        title: currentTitle, 
+        content: currentContent.toString().trim(),
+        parentTitle: currentParentTitle,
+        level: currentLevel,
+      ));
+    }
+    
+    return sections;
+  }
 }
 
-// 添加Section类用于存储章节信息
 class Section {
   final String title;
   final String content;
+  final String parentTitle;
+  final int level;
   
-  Section(this.title, this.content);
+  Section({
+    required this.title, 
+    required this.content, 
+    this.parentTitle = '',
+    required this.level,
+  });
 }
