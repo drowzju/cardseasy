@@ -19,6 +19,7 @@ import '../../models/key_point.dart';
 import '../../models/understanding.dart';
 import '../../widgets/understanding_header.dart';
 import '../../widgets/understanding_list.dart';
+import '../../widgets/card_preview_panel.dart';
 
 class CardCreateScreen extends StatefulWidget {
   final String? initialSaveDirectory;
@@ -35,7 +36,7 @@ class CardCreateScreen extends StatefulWidget {
 class _CardCreateScreenState extends State<CardCreateScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
-  String? _saveDirectory;
+  // 移除 String? _saveDirectory; 变量
   bool _isSaving = false;
   final List<String> _imageFiles = [];
 
@@ -66,8 +67,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   void initState() {
     super.initState();
     
-    // 初始化保存目录
-    _saveDirectory = widget.initialSaveDirectory;
+    // 移除初始化保存目录的代码
     
     _contentController.addListener(() {
       setState(() {
@@ -79,11 +79,6 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showTitleInputDialog();
     });
-    
-    // 设置初始保存目录
-    if (widget.initialSaveDirectory != null) {
-      _saveDirectory = widget.initialSaveDirectory;
-    }
   }
 
   // 显示标题输入对话框
@@ -305,15 +300,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     });
   }
 
-  // 选择保存目录
-  Future<void> _selectSaveDirectory() async {
-    String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-    if (selectedDirectory != null) {
-      setState(() {
-        _saveDirectory = selectedDirectory;
-      });
-    }
-  }
+
 
   // 添加标志防止重复调用图片选择
   bool _isSelectingImage = false;
@@ -336,8 +323,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
       await ImageHandler.selectAndProcessImage(
         contentController: currentController,
-        saveDirectory: _saveDirectory,
-        selectSaveDirectory: _selectSaveDirectory,
+        saveDirectory: widget.initialSaveDirectory,  // 使用传入的初始保存目录
         imageFiles: _imageFiles,
         showErrorDialog: _showErrorDialog,
         updateImageFiles: (files) {
@@ -426,7 +412,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     final bool success = await CardSaver.saveCard(
       title: _titleController.text,
       fullMarkdown: fullMarkdown,
-      saveDirectory: _saveDirectory,
+      saveDirectory: widget.initialSaveDirectory,
       imageFiles: _imageFiles,
       showErrorDialog: _showErrorDialog,
     );
@@ -451,12 +437,8 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       _showErrorDialog('请输入卡片标题');
       return false;
     }
-    
-    if (_saveDirectory == null) {
-      _showErrorDialog('请选择保存目录');
-      return false;
-    }
-    
+   
+
     // 检查标题是否包含非法字符
     final RegExp illegalChars = RegExp(r'[<>:"/\\|?*]');
     if (illegalChars.hasMatch(_titleController.text)) {
@@ -497,18 +479,11 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
         title: Text(_titleController.text.isEmpty ? '创建新卡片' : _titleController.text),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Column(
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildSaveDirectorySection(), // 新的保存目录选择区域
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildEditorSection(),
-                _buildPreviewSection(),
-              ],
-            ),
-          ),
+          _buildEditorSection(),
+          _buildPreviewSection(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -530,28 +505,8 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     );
   }
 
-  // 新的保存目录选择区域
-  Widget _buildSaveDirectorySection() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              '保存位置: ${_saveDirectory ?? "未选择"}',
-              style: const TextStyle(fontSize: 16),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: _selectSaveDirectory,
-            child: const Text('选择文件夹'),
-          ),
-        ],
-      ),
-    );
-  }
+  // 移除 _buildSaveDirectorySection() 方法
+    
 
   // 折叠状态变量
   bool _isConceptExpanded = true;
@@ -687,107 +642,13 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   }
 
   // 构建预览区域
-  Widget _buildPreviewSection() {
-    return Expanded(
-      child: Card(
-        margin: const EdgeInsets.fromLTRB(8, 0, 16, 16),
-        elevation: 4,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  const Text(
-                    '预览',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      setState(() {
-                        // 触发重建以更新预览
-                      });
-                    },
-                    tooltip: '刷新预览',
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _titleController.text,
-                      style: const TextStyle(
-                        fontFamily: 'NotoSansSC',
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    MarkdownBody(
-                      data: _generateFullMarkdown(),
-                      selectable: true,
-                      styleSheet: MarkdownStyleSheet(
-                        h1: const TextStyle(
-                          fontFamily: 'NotoSansSC',
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        h2: const TextStyle(
-                          fontFamily: 'NotoSansSC',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        h3: const TextStyle(
-                          fontFamily: 'NotoSansSC',
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        p: const TextStyle(
-                          fontFamily: 'NotoSansSC',
-                          fontSize: 16,
-                        ),
-                        em: const TextStyle(
-                          fontFamily: 'NotoSansSC',
-                          fontSize: 16,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        strong: const TextStyle(
-                          fontFamily: 'NotoSansSC',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        blockquote: const TextStyle(
-                          fontFamily: 'NotoSansSC',
-                          fontSize: 16,
-                          color: Colors.grey,
-                        ),
-                        code: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 14,
-                          backgroundColor: Color(0xFFf7f7f7),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+Widget _buildPreviewSection() {
+  return CardPreviewPanel(
+    title: _titleController.text,
+    content: _generateFullMarkdown(),
+    imageFiles: _imageFiles,
+  );
+}
 
   // 生成完整的Markdown内容
   String _generateFullMarkdown() {

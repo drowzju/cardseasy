@@ -31,9 +31,6 @@ class UnderstandingList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (understandings.isEmpty) {
-      return const Center(child: Text('点击 + 添加理解与关联'));
-    }
 
     return Container(
       constraints: const BoxConstraints(minHeight: 100, maxHeight: 400),

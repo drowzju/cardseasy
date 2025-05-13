@@ -31,9 +31,7 @@ class KeyPointList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (keyPoints.isEmpty) {
-      return const Center(child: Text('点击 + 添加关键知识点'));
-    }
+
 
     return Container(
       constraints: const BoxConstraints(minHeight: 100, maxHeight: 400),

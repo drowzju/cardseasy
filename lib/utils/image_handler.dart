@@ -8,7 +8,6 @@ class ImageHandler {
   static Future<void> selectAndProcessImage({
     required TextEditingController contentController,
     required String? saveDirectory,
-    required Function() selectSaveDirectory,
     required List<String> imageFiles,
     required Function(String) showErrorDialog,
     required Function(List<String>) updateImageFiles,
