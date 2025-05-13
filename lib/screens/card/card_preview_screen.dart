@@ -118,17 +118,17 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 标题
                         Text(
                           widget.card.title,
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        // Markdown内容
-                        MarkdownRenderer(data: widget.card.content),
+                        const SizedBox(height: 16),
+                        MarkdownRenderer(
+                          data: widget.card.content,
+                          selectable: true,
+                        ),
                       ],
                     ),
                   ),
@@ -184,8 +184,8 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
                           ),
                         ),
                         const SizedBox(height: 24),
-                        // 解析后的自测内容
-                        _buildSelfTestContent(widget.card.content),
+                        // Markdown内容
+                        MarkdownRenderer(data: widget.card.content),
                       ],
                     ),
                   ),

@@ -48,17 +48,18 @@ class CardPreviewPanel extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 标题
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.bold,
+                    if (title.isNotEmpty)
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                    const SizedBox(height: 16),
+                    MarkdownRenderer(
+                      data: content,
+                      selectable: true,
                     ),
-                    const SizedBox(height: 24),
-                    // Markdown内容
-                    MarkdownRenderer(data: content),
                   ],
                 ),
               ),
