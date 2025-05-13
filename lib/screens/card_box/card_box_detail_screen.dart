@@ -5,6 +5,9 @@ import 'package:path/path.dart' as path;
 import '../../models/card_box.dart';
 import '../../models/card_model.dart';
 import '../../services/card_service.dart';
+import '../../widgets/card_grid_view.dart';
+import '../../widgets/card_list_view.dart';
+import '../../widgets/empty_card_view.dart';
 import '../card/card_create_screen.dart';
 import '../card/card_preview_screen.dart';  // 添加导入
 
@@ -193,10 +196,10 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _filteredCards.isEmpty
-              ? _buildEmptyView()
+              ? const EmptyCardView()
               : _isGridView
-                  ? _buildGridView()
-                  : _buildListView(),
+                  ? CardGridView(cards: _filteredCards, onCardTap: _viewCard)
+                  : CardListView(cards: _filteredCards, onCardTap: _viewCard),
       floatingActionButton: FloatingActionButton(
         onPressed: _createNewCard,
         tooltip: '创建新卡片',
@@ -204,101 +207,8 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
       ),
     );
   }
-
-  Widget _buildGridView() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(4),  // 进一步减少内边距
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 8,  // 每行显示8张卡片
-        childAspectRatio: 0.9,  // 调整宽高比
-        crossAxisSpacing: 4,  // 减少卡片间水平间距
-        mainAxisSpacing: 4,  // 减少卡片间垂直间距
-      ),
-      itemCount: _filteredCards.length,
-      itemBuilder: (context, index) {
-        final card = _filteredCards[index];
-        return _buildCardItem(card);
-      },
-    );
-  }
-
-  Widget _buildCardItem(CardModel card) {
-    return InkWell(
-      onTap: () => _viewCard(card),
-      child: Card(
-        elevation: 2,  // 恢复默认阴影
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.note,
-              size: 40,  // 适当放大图标
-              color: Colors.blue,
-            ),
-            const SizedBox(height: 8),  // 增加间距
-            Text(
-              card.title,
-              style: const TextStyle(
-                fontSize: 14,  // 适当放大字体
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildListView() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(4),  // 减少内边距
-      itemCount: _filteredCards.length,
-      itemBuilder: (context, index) {
-        final card = _filteredCards[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),  // 减少边距
-          child: ListTile(
-            dense: true,  // 启用紧凑模式
-            title: Text(
-              card.title,
-              style: const TextStyle(fontSize: 14),  // 减小字体大小
-            ),
-            subtitle: Text('点击查看详情'),
-            leading: const Icon(
-              Icons.note,
-              color: Colors.blue,
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () => _viewCard(card),
-          ),
-        );
-      },
-    );
-  }
-  
-  Widget _buildEmptyView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.inbox, size: 80, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
-            '没有卡片',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text('在此目录中创建子文件夹作为卡片'),
-        ],
-      ),
-    );
-  }
   
   void _viewCard(CardModel card) {
-    // 实现卡片预览功能
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -307,7 +217,6 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
     );
   }
   
-  // 添加创建新卡片的方法
   void _createNewCard() {
     Navigator.push(
       context,
@@ -317,7 +226,6 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
         ),
       ),
     ).then((_) {
-      // 当从创建卡片页面返回时，刷新卡片列表
       _loadCards();
     });
   }
