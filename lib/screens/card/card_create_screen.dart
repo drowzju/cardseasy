@@ -791,17 +791,11 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 生成完整的Markdown内容
   String _generateFullMarkdown() {
-    final StringBuffer markdown = StringBuffer();
-    
-    // 添加标题
-    markdown.writeln('# ${_titleController.text}\n');
-    
+    final StringBuffer markdown = StringBuffer();    
     // 添加整体概念章节（无论是否有内容）
     markdown.writeln('# 整体概念\n');
     if (_contentController.text.isNotEmpty) {
       markdown.writeln('${_contentController.text}\n');
-    } else {
-      markdown.writeln('*暂无整体概念内容*\n');
     }
     
     // 添加关键知识点章节（无论是否有内容）
@@ -813,13 +807,9 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
         markdown.writeln('## ${keyPoint.title}\n');
         if (content.isNotEmpty) {
           markdown.writeln('$content\n');
-        } else {
-          markdown.writeln('*暂无内容*\n');
-        }
+        } 
       }
-    } else {
-      markdown.writeln('*暂无关键知识点*\n');
-    }
+    } 
     
     // 添加理解与关联章节（无论是否有内容）
     markdown.writeln('# 理解与关联\n');
@@ -830,13 +820,9 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
         markdown.writeln('## ${understanding.title}\n');
         if (content.isNotEmpty) {
           markdown.writeln('$content\n');
-        } else {
-          markdown.writeln('*暂无内容*\n');
-        }
+        } 
       }
-    } else {
-      markdown.writeln('*暂无理解与关联内容*\n');
-    }
+    } 
     
     return markdown.toString();
   }
