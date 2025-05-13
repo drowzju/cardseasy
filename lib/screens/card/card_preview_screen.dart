@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../models/card_model.dart';
+import '../../widgets/markdown_renderer.dart';
 
 class CardPreviewScreen extends StatefulWidget {
   final CardModel card;
@@ -113,36 +114,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
                         ),
                         const SizedBox(height: 24),
                         // Markdown内容
-                        MarkdownBody(
-                          data: widget.card.content,
-                          selectable: true,
-                          imageBuilder: (uri, title, alt) {
-                            try {
-                              final filePath = uri.toFilePath();
-                              return Image.file(
-                                File(filePath),
-                                errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.broken_image),
-                              );
-                            } catch (e) {
-                              return Text('图片加载失败: ${uri.path}');
-                            }
-                          },
-                          styleSheet: MarkdownStyleSheet(
-                            h1: Theme.of(context).textTheme.headlineMedium,
-                            h2: Theme.of(context).textTheme.titleLarge,
-                            h3: Theme.of(context).textTheme.titleMedium,
-                            p: Theme.of(context).textTheme.bodyLarge,
-                            code: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontFamily: 'monospace',
-                              backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
-                            ),
-                            blockquote: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.secondary,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
+                        MarkdownRenderer(data: widget.card.content),
                       ],
                     ),
                   ),
@@ -292,12 +264,9 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
           AnimatedCrossFade(
             firstChild: Padding(
               padding: const EdgeInsets.all(16),
-              child: MarkdownBody(
+              child: MarkdownRenderer(
                 data: conceptSection.content,
-                selectable: true,
-                styleSheet: MarkdownStyleSheet(
-                  p: Theme.of(context).textTheme.bodyLarge,
-                ),
+                textStyle: Theme.of(context).textTheme.bodyLarge,
               ),
             ),
             secondChild: const SizedBox.shrink(),
@@ -430,12 +399,9 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
                 bottom: Radius.circular(5),
               ),
             ),
-            child: MarkdownBody(
+            child: MarkdownRenderer(
               data: section.content,
-              selectable: true,
-              styleSheet: MarkdownStyleSheet(
-                p: Theme.of(context).textTheme.bodyLarge,
-              ),
+              textStyle: Theme.of(context).textTheme.bodyLarge,
             ),
           ),
           secondChild: const SizedBox.shrink(),
