@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../models/card_model.dart';
 import '../../widgets/markdown_renderer.dart';
+import 'card_create_screen.dart';
+import '../../utils/card_parser.dart';
+import 'package:uuid/uuid.dart';
+import '../../models/key_point.dart';
+import '../../models/understanding.dart';
 
 class CardPreviewScreen extends StatefulWidget {
   final CardModel card;
@@ -46,6 +51,14 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
       appBar: AppBar(
         title: Text(widget.card.title),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          // 添加编辑按钮
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: '编辑卡片',
+            onPressed: _editCard,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -512,6 +525,49 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> with SingleTicker
     
     return sections;
   }
+
+
+// 添加编辑卡片方法
+void _editCard() {
+  // 解析卡片内容
+  final sections = _parseSections(widget.card.content);
+  
+  // 提取整体概念
+  final conceptContent = sections
+      .where((s) => s.level == 1 && s.title == '整体概念')
+      .map((s) => s.content)
+      .join('\n');
+  
+  // 提取关键知识点
+  final keyPoints = sections
+      .where((s) => s.level == 2 && s.parentTitle == '关键知识点')
+      .map((s) => KeyPoint(id: const Uuid().v4(), title: s.title, content: s.content))
+      .toList();
+  
+  // 提取理解与关联
+  final understandings = sections
+      .where((s) => s.level == 2 && s.parentTitle == '理解与关联')
+      .map((s) => Understanding(id: const Uuid().v4(), title: s.title, content: s.content))
+      .toList();
+  
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => CardCreateScreen(
+        initialSaveDirectory: widget.card.filePath,
+        initialTitle: widget.card.title,
+        initialContent: conceptContent,        
+        initialKeyPoints: keyPoints,
+        initialUnderstandings: understandings,
+        isEditMode: true,
+      ),
+    ),
+  ).then((_) {
+    // 刷新卡片内容
+    setState(() {});
+  });
+}
+
 }
 
 // 用于存储解析后的章节信息
@@ -528,3 +584,5 @@ class Section {
     this.parentTitle,
   });
 }
+
+

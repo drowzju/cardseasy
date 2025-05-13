@@ -23,10 +23,20 @@ import '../../widgets/card_preview_panel.dart';
 
 class CardCreateScreen extends StatefulWidget {
   final String? initialSaveDirectory;
-  
+  final String? initialTitle; // 添加初始标题
+  final String? initialContent; // 添加初始内容
+  final List<KeyPoint>? initialKeyPoints; // 添加初始关键知识点
+  final List<Understanding>? initialUnderstandings; // 添加初始理解与关联
+  final bool isEditMode; // 添加编辑模式标志
+
   const CardCreateScreen({
     super.key,
     this.initialSaveDirectory,
+    this.initialTitle,
+    this.initialContent,
+    this.initialKeyPoints,
+    this.initialUnderstandings,
+    this.isEditMode = false, // 默认为创建模式
   });
 
   @override
@@ -58,7 +68,8 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   final Map<String, bool> _understandingExpandedStates = {};
 
   // 当前编辑模式
-  String _currentEditMode = 'text'; // 'text', 'bold', 'italic', 'heading', 'list'
+  String _currentEditMode =
+      'text'; // 'text', 'bold', 'italic', 'heading', 'list'
 
   // 添加滚动控制器
   final ScrollController _scrollController = ScrollController();
@@ -66,19 +77,65 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   @override
   void initState() {
     super.initState();
-    
-    // 移除初始化保存目录的代码
-    
+
+    // 初始化编辑数据
+    if (widget.isEditMode && widget.initialTitle != null) {
+      _titleController.text = widget.initialTitle!;
+    }
+
+    if (widget.isEditMode && widget.initialContent != null) {
+      _contentController.text = widget.initialContent!;
+    }
+
+    // 初始化关键知识点
+    if (widget.isEditMode && widget.initialKeyPoints != null) {
+      for (var keyPoint in widget.initialKeyPoints!) {
+        final controller = TextEditingController(text: keyPoint.content);
+        _keyPoints.add(keyPoint);
+        _keyPointControllers[keyPoint.id] = controller;
+
+        controller.addListener(() {
+          final int index = _keyPoints.indexWhere((kp) => kp.id == keyPoint.id);
+          if (index != -1) {
+            setState(() {
+              _keyPoints[index].content = controller.text;
+            });
+          }
+        });
+      }
+    }
+
+    // 初始化理解与关联
+    if (widget.isEditMode && widget.initialUnderstandings != null) {
+      for (var understanding in widget.initialUnderstandings!) {
+        final controller = TextEditingController(text: understanding.content);
+        _understandings.add(understanding);
+        _understandingControllers[understanding.id] = controller;
+
+        controller.addListener(() {
+          final int index =
+              _understandings.indexWhere((u) => u.id == understanding.id);
+          if (index != -1) {
+            setState(() {
+              _understandings[index].content = controller.text;
+            });
+          }
+        });
+      }
+    }
+
     _contentController.addListener(() {
       setState(() {
         // 触发重建以更新预览
       });
     });
-    
-    // 在初始化时弹出标题输入对话框
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showTitleInputDialog();
-    });
+
+    // 仅在创建模式下弹出标题输入对话框
+    if (!widget.isEditMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showTitleInputDialog();
+      });
+    }
   }
 
   // 显示标题输入对话框
@@ -186,7 +243,8 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
           _keyPoints.removeWhere((kp) => kp.id == id);
 
           if (_currentKeyPointId == id) {
-            _currentKeyPointId = _keyPoints.isNotEmpty ? _keyPoints.first.id : null;
+            _currentKeyPointId =
+                _keyPoints.isNotEmpty ? _keyPoints.first.id : null;
           }
         });
       }
@@ -268,7 +326,8 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
           _understandings.removeWhere((u) => u.id == id);
 
           if (_currentUnderstandingId == id) {
-            _currentUnderstandingId = _understandings.isNotEmpty ? _understandings.first.id : null;
+            _currentUnderstandingId =
+                _understandings.isNotEmpty ? _understandings.first.id : null;
           }
         });
       }
@@ -300,8 +359,6 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     });
   }
 
-
-
   // 添加标志防止重复调用图片选择
   bool _isSelectingImage = false;
 
@@ -312,7 +369,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
     try {
       TextEditingController currentController;
-      
+
       if (_currentKeyPointId != null) {
         currentController = _keyPointControllers[_currentKeyPointId]!;
       } else if (_currentUnderstandingId != null) {
@@ -323,7 +380,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
       await ImageHandler.selectAndProcessImage(
         contentController: currentController,
-        saveDirectory: widget.initialSaveDirectory,  // 使用传入的初始保存目录
+        saveDirectory: widget.initialSaveDirectory, // 使用传入的初始保存目录
         imageFiles: _imageFiles,
         showErrorDialog: _showErrorDialog,
         updateImageFiles: (files) {
@@ -358,7 +415,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   void _insertMarkdownFormat(String format) {
     try {
       TextEditingController currentController;
-      
+
       if (_currentKeyPointId != null) {
         currentController = _keyPointControllers[_currentKeyPointId]!;
       } else if (_currentUnderstandingId != null) {
@@ -398,35 +455,39 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 保存卡片
   Future<void> _saveCard() async {
-    // 添加卡片有效性检查
-    if (!_validateCard()) {
+    if (_titleController.text.trim().isEmpty) {
+      _showErrorDialog('请输入卡片标题');
       return;
     }
-    
+
     setState(() {
       _isSaving = true;
     });
 
-    final String fullMarkdown = _generateFullMarkdown();
-
-    final bool success = await CardSaver.saveCard(
-      title: _titleController.text,
-      fullMarkdown: fullMarkdown,
-      saveDirectory: widget.initialSaveDirectory,
-      imageFiles: _imageFiles,
-      showErrorDialog: _showErrorDialog,
-    );
-
-    if (mounted) {
-      setState(() {
-        _isSaving = false;
-      });
+    try {
+      final bool success = await CardSaver.saveCard(
+        title: _titleController.text,
+        fullMarkdown: _generateFullMarkdown(),
+        saveDirectory: widget.initialSaveDirectory,
+        imageFiles: _imageFiles,
+        showErrorDialog: _showErrorDialog,        
+      );
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('卡片保存成功')),
-        );
-        Navigator.pop(context);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('卡片保存成功')),
+          );
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      _showErrorDialog('保存卡片时出错: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
       }
     }
   }
@@ -437,7 +498,6 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       _showErrorDialog('请输入卡片标题');
       return false;
     }
-   
 
     // 检查标题是否包含非法字符
     final RegExp illegalChars = RegExp(r'[<>:"/\\|?*]');
@@ -445,13 +505,13 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       _showErrorDialog('标题包含非法字符: < > : " / \\ | ? *');
       return false;
     }
-    
+
     // 检查内容是否为空
     if (_contentController.text.trim().isEmpty && _keyPoints.isEmpty) {
       _showErrorDialog('请添加卡片内容或至少一个关键知识点');
       return false;
     }
-    
+
     return true;
   }
 
@@ -476,7 +536,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titleController.text.isEmpty ? '创建新卡片' : _titleController.text),
+        title: Text(widget.isEditMode ? '编辑卡片' : '创建卡片'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Row(
@@ -506,7 +566,6 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   }
 
   // 移除 _buildSaveDirectorySection() 方法
-    
 
   // 折叠状态变量
   bool _isConceptExpanded = true;
@@ -550,7 +609,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                   ),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 300),
-                    child: _isKeyPointsExpanded 
+                    child: _isKeyPointsExpanded
                         ? KeyPointList(
                             keyPoints: _keyPoints,
                             keyPointExpandedStates: _keyPointExpandedStates,
@@ -561,8 +620,10 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                             onKeyPointDeleted: _deleteKeyPoint,
                             onKeyPointToggleExpanded: (id) {
                               setState(() {
-                                _keyPointExpandedStates[id] = !(_keyPointExpandedStates[id] ?? true);
-                                if (!(_keyPointExpandedStates[id] ?? true) && _currentKeyPointId != id) {
+                                _keyPointExpandedStates[id] =
+                                    !(_keyPointExpandedStates[id] ?? true);
+                                if (!(_keyPointExpandedStates[id] ?? true) &&
+                                    _currentKeyPointId != id) {
                                   _setCurrentKeyPoint(id);
                                 }
                               });
@@ -593,10 +654,11 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                   ),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 300),
-                    child: _isUnderstandingExpanded 
+                    child: _isUnderstandingExpanded
                         ? UnderstandingList(
                             understandings: _understandings,
-                            understandingExpandedStates: _understandingExpandedStates,
+                            understandingExpandedStates:
+                                _understandingExpandedStates,
                             understandingControllers: _understandingControllers,
                             currentUnderstandingId: _currentUnderstandingId,
                             currentEditMode: _currentEditMode,
@@ -604,8 +666,11 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                             onUnderstandingDeleted: _deleteUnderstanding,
                             onUnderstandingToggleExpanded: (id) {
                               setState(() {
-                                _understandingExpandedStates[id] = !(_understandingExpandedStates[id] ?? true);
-                                if (!(_understandingExpandedStates[id] ?? true) && _currentUnderstandingId != id) {
+                                _understandingExpandedStates[id] =
+                                    !(_understandingExpandedStates[id] ?? true);
+                                if (!(_understandingExpandedStates[id] ??
+                                        true) &&
+                                    _currentUnderstandingId != id) {
                                   _setCurrentUnderstanding(id);
                                 }
                               });
@@ -642,49 +707,50 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   }
 
   // 构建预览区域
-Widget _buildPreviewSection() {
-  return CardPreviewPanel(
-    title: _titleController.text,
-    content: _generateFullMarkdown(),
-    imageFiles: _imageFiles,
-  );
-}
+  Widget _buildPreviewSection() {
+    return CardPreviewPanel(
+      title: _titleController.text,
+      content: _generateFullMarkdown(),
+      imageFiles: _imageFiles,
+    );
+  }
 
   // 生成完整的Markdown内容
   String _generateFullMarkdown() {
-    final StringBuffer markdown = StringBuffer();    
+    final StringBuffer markdown = StringBuffer();
     // 添加整体概念章节（无论是否有内容）
     markdown.writeln('# 整体概念\n');
     if (_contentController.text.isNotEmpty) {
       markdown.writeln('${_contentController.text}\n');
     }
-    
+
     // 添加关键知识点章节（无论是否有内容）
     markdown.writeln('# 关键知识点\n');
-    
+
     if (_keyPoints.isNotEmpty) {
       for (final keyPoint in _keyPoints) {
         final String content = _keyPointControllers[keyPoint.id]?.text ?? '';
         markdown.writeln('## ${keyPoint.title}\n');
         if (content.isNotEmpty) {
           markdown.writeln('$content\n');
-        } 
+        }
       }
-    } 
-    
+    }
+
     // 添加理解与关联章节（无论是否有内容）
     markdown.writeln('# 理解与关联\n');
-    
+
     if (_understandings.isNotEmpty) {
       for (final understanding in _understandings) {
-        final String content = _understandingControllers[understanding.id]?.text ?? '';
+        final String content =
+            _understandingControllers[understanding.id]?.text ?? '';
         markdown.writeln('## ${understanding.title}\n');
         if (content.isNotEmpty) {
           markdown.writeln('$content\n');
-        } 
+        }
       }
-    } 
-    
+    }
+
     return markdown.toString();
   }
 }
