@@ -24,25 +24,14 @@ class CardPreviewScreen extends StatefulWidget {
   State<CardPreviewScreen> createState() => _CardPreviewScreenState();
 }
 
-class _CardPreviewScreenState extends State<CardPreviewScreen>
-    with SingleTickerProviderStateMixin {
-  bool _isPreviewMode = true;
-  late TabController _tabController;
+class _CardPreviewScreenState extends State<CardPreviewScreen> {
+  bool _isPreviewMode = true; // 默认为预览模式
   final Map<String, bool> _sectionVisibility = {}; // 用于存储每个章节的可见性状态
   CardMetadata? _metadata; // 添加元数据属性
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        setState(() {
-          _isPreviewMode = _tabController.index == 0;
-        });
-      }
-    });
-
     // 加载卡片元数据
     _loadCardMetadata();
   }
@@ -61,46 +50,70 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.card.title),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          // 添加编辑按钮
+          // 预览按钮
+          TextButton.icon(
+            icon: Icon(
+              Icons.preview,
+              color: _isPreviewMode
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey,
+            ),
+            label: Text(
+              '预览',
+              style: TextStyle(
+                color: _isPreviewMode
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey,
+                fontWeight:
+                    _isPreviewMode ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            onPressed: () {
+              setState(() {
+                _isPreviewMode = true;
+              });
+            },
+          ),
+          // 自测按钮
+          TextButton.icon(
+            icon: Icon(
+              Icons.quiz,
+              color: !_isPreviewMode
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey,
+            ),
+            label: Text(
+              '自测',
+              style: TextStyle(
+                color: !_isPreviewMode
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey,
+                fontWeight:
+                    !_isPreviewMode ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            onPressed: () {
+              setState(() {
+                _isPreviewMode = false;
+              });
+            },
+          ),
+          // 编辑按钮
           IconButton(
             icon: const Icon(Icons.edit),
             tooltip: '编辑卡片',
             onPressed: _editCard,
           ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(
-              icon: Icon(Icons.preview),
-              text: '预览',
-            ),
-            Tab(
-              icon: Icon(Icons.quiz),
-              text: '自测',
-            ),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildPreviewTab(),
-          _buildSelfTestTab(),
+          const SizedBox(width: 8), // 右侧边距
         ],
       ),
+      body: _isPreviewMode ? _buildPreviewTab() : _buildSelfTestTab(),
       // 添加悬浮按钮，仅在自测模式下显示
       floatingActionButton: !_isPreviewMode
           ? FloatingActionButton.extended(
@@ -112,10 +125,11 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
           : null,
     );
   }
+
   // 显示自测评分对话框
   void _showSelfTestRatingDialog() {
     int selectedScore = _metadata?.selfTestScore ?? 5;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -130,10 +144,11 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('$selectedScore', style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    )),
+                    Text('$selectedScore',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        )),
                     const Text(' / 10'),
                   ],
                 ),
@@ -178,24 +193,24 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
       ),
     );
   }
-  
+
   // 保存自测评分
   Future<void> _saveSelfTestScore(int score) async {
     final metadata = CardMetadata(
       selfTestScore: score,
       lastTestDate: DateTime.now(),
     );
-    
+
     final success = await MetadataManager.saveMetadata(
       cardFilePath: widget.card.filePath,
       metadata: metadata,
     );
-    
+
     if (success && mounted) {
       setState(() {
         _metadata = metadata;
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('自测评分已保存')),
       );
@@ -211,14 +226,15 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
       children: [
         Expanded(
           child: Card(
-            margin: const EdgeInsets.fromLTRB(8,8,8,8),
+            margin: const EdgeInsets.fromLTRB(8, 8, 8, 8),
             elevation: 4,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 预览区域标题栏
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0, vertical: 8.0),
                   child: Row(
                     children: [
                       const Icon(Icons.preview, size: 24),
@@ -278,17 +294,39 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
               children: [
                 // 自测区域标题栏
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0, vertical: 8.0),
                   child: Row(
                     children: [
-                      const Icon(Icons.quiz, size: 24),
-                      const SizedBox(width: 8),
+                      const Icon(Icons.quiz, size: 20),
+                      const SizedBox(width: 4),
                       Text(
                         '自测模式',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                       ),
+                      // 显示当前评分（如果有）
+                      if (_metadata != null && _metadata!.selfTestScore > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '评分: ${_metadata!.selfTestScore}/10',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -312,8 +350,8 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
                               ),
                         ),
                         const SizedBox(height: 24),
-                        // Markdown内容
-                        MarkdownRenderer(data: widget.card.content),
+                        // 使用分段内容显示
+                        _buildSelfTestContent(widget.card.content),
                       ],
                     ),
                   ),
@@ -377,7 +415,8 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
             },
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
                 borderRadius:
