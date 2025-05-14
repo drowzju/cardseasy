@@ -32,13 +32,8 @@ class CardSaver {
         await cardDir.create(recursive: true);
       }
 
-      // 创建图片目录
-      final String imagesDirPath = path.join(cardDirPath, 'images');
-      final Directory imagesDir = Directory(imagesDirPath);
-
-      if (!await imagesDir.exists()) {
-        await imagesDir.create(recursive: true);
-      }
+      // 不再创建单独的图片目录，直接使用卡片目录
+      final String imagesDirPath = cardDirPath;
 
       // 复制图片到目标目录
       for (String imagePath in imageFiles) {

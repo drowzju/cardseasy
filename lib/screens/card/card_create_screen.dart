@@ -20,6 +20,7 @@ import '../../models/understanding.dart';
 import '../../widgets/understanding_header.dart';
 import '../../widgets/understanding_list.dart';
 import '../../widgets/card_preview_panel.dart';
+import 'package:path/path.dart' as path;
 
 class CardCreateScreen extends StatefulWidget {
   final String? initialSaveDirectory;
@@ -465,10 +466,27 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     });
 
     try {
+      // 如果是编辑模式，使用卡片盒目录而不是卡片目录作为保存目录
+      String? saveDirectory = widget.initialSaveDirectory;
+      
+      if (widget.isEditMode && saveDirectory != null) {
+        // 检查当前目录是否已经是卡片目录（以卡片标题命名）
+        final sanitizedTitle = _titleController.text
+            .replaceAll(RegExp(r'[<>:"\\|?*]'), '_')
+            .replaceAll(RegExp(r'\s+'), '_');
+            
+        final dirName = path.basename(saveDirectory);
+        
+        // 如果当前目录已经是卡片目录，则使用其父目录
+        if (dirName == sanitizedTitle) {
+          saveDirectory = path.dirname(saveDirectory);
+        }
+      }
+      
       final bool success = await CardSaver.saveCard(
         title: _titleController.text,
         fullMarkdown: _generateFullMarkdown(),
-        saveDirectory: widget.initialSaveDirectory,
+        saveDirectory: saveDirectory,
         imageFiles: _imageFiles,
         showErrorDialog: _showErrorDialog,        
       );
@@ -478,7 +496,6 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('卡片保存成功')),
           );
-
         }
       }
     } catch (e) {

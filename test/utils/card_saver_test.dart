@@ -89,7 +89,10 @@ void main() {
           'D:/temp/other_image.png',
         ];
 
-        final String imagesDirPath = 'D:/temp/卡片/测试卡片/images';
+        // 将所有类似这样的路径：
+        // final String imagesDirPath = 'D:/temp/卡片/测试卡片/images';
+        // 修改为：
+        final String imagesDirPath = 'D:/temp/卡片/测试卡片';
 
         // 执行测试
         final String result = CardSaver._updateImageLinks(markdown, imageFiles, imagesDirPath);
