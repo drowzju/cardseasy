@@ -13,8 +13,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CardsEasy',
-      theme: ThemeData(
-        // 定义主色调为蓝色
+      theme: AppTheme.lightTheme.copyWith(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.blue.shade700,
           primary: Colors.blue.shade700,
@@ -22,7 +21,6 @@ class MyApp extends StatelessWidget {
           // 确保inversePrimary不是紫色
           inversePrimary: Colors.blue.shade100,
         ),
-        // 其他主题设置
         useMaterial3: true,
       ),
       home: const HomeScreen(),
