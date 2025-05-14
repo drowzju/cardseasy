@@ -12,10 +12,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '卡片易',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      // 移除重复的 theme 定义
+      title: 'CardsEasy',
+      theme: ThemeData(
+        // 定义主色调为蓝色
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue.shade700,
+          primary: Colors.blue.shade700,
+          secondary: Colors.green.shade600,
+          // 确保inversePrimary不是紫色
+          inversePrimary: Colors.blue.shade100,
+        ),
+        // 其他主题设置
+        useMaterial3: true,
+      ),
       home: const HomeScreen(),
     );
   }

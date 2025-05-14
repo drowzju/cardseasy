@@ -446,7 +446,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                     _sectionVisibility['整体概念']!
                         ? Icons.keyboard_arrow_down
                         : Icons.keyboard_arrow_right,
-                    color: Colors.purple.shade700,
+                    color: Colors.blue.shade700, // 将紫色改为蓝色
                     size: 18,
                   ),
                   const SizedBox(width: 4),
@@ -454,7 +454,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                     '整体概念',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.purple.shade700,
+                          color: Colors.blue.shade700, // 将紫色改为蓝色
                         ),
                   ),
                 ],
@@ -621,17 +621,15 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
     );
   }
 
-  // 获取不同部分的颜色
-  Color _getSectionColor(String title) {
-    switch (title) {
-      case '整体概念':
-        return Colors.purple.shade700;
+  // 根据章节类型获取颜色
+  Color _getSectionColor(String sectionTitle) {
+    switch (sectionTitle) {
       case '关键知识点':
-        return Colors.blue.shade700;
+        return Colors.blue.shade700; // 保持蓝色
       case '理解与关联':
-        return Colors.green.shade700;
+        return Colors.green.shade700; // 保持绿色
       default:
-        return Colors.grey.shade700;
+        return Colors.blue.shade700; // 将紫色改为蓝色
     }
   }
 
