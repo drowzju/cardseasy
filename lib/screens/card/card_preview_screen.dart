@@ -115,14 +115,6 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
       ),
       body: _isPreviewMode ? _buildPreviewTab() : _buildSelfTestTab(),
       // 添加悬浮按钮，仅在自测模式下显示
-      floatingActionButton: !_isPreviewMode
-          ? FloatingActionButton.extended(
-              onPressed: _showSelfTestRatingDialog,
-              icon: const Icon(Icons.rate_review),
-              label: const Text('自测评价'),
-              backgroundColor: Colors.white,
-            )
-          : null,
     );
   }
 
@@ -314,7 +306,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.blue,
+                              color: Colors.blue.shade700,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -327,9 +319,22 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                             ),
                           ),
                         ),
-                    ],
-                  ),
+                    const Spacer(), // 添加空白区域，将按钮推到右侧
+                    // 添加自测评价按钮
+                    ElevatedButton.icon(
+                      onPressed: _showSelfTestRatingDialog,
+                      icon: const Icon(Icons.rate_review, size: 16),
+                      label: const Text('自测评价'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
                 const Divider(height: 1),
                 // 自测内容
                 Expanded(

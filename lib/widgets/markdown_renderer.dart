@@ -56,6 +56,7 @@ class MarkdownRenderer extends StatelessWidget {
 }
 
 // 添加可缩放图片组件
+// 修改可缩放图片组件
 class ZoomableImage extends StatefulWidget {
   final File imageFile;
   final Widget errorWidget;
@@ -72,50 +73,85 @@ class ZoomableImage extends StatefulWidget {
 
 class _ZoomableImageState extends State<ZoomableImage> {
   double _scale = 1.0;
-  Offset _offset = Offset.zero;
-  final TransformationController _transformationController = TransformationController();
-
-  void _onDoubleTap() {
+  bool _showControls = false;
+  
+  void _zoomIn() {
+    setState(() {
+      _scale = (_scale + 0.1).clamp(0.5, 3.0);
+    });
+  }
+  
+  void _zoomOut() {
+    setState(() {
+      _scale = (_scale - 0.1).clamp(0.5, 3.0);
+    });
+  }
+  
+  void _resetZoom() {
     setState(() {
       _scale = 1.0;
-      _offset = Offset.zero;
-      _transformationController.value = Matrix4.identity();
     });
   }
-
-  void _onScaleUpdate(ScaleUpdateDetails details) {
-    setState(() {
-      _scale = (_scale * details.scale).clamp(0.5, 3.0);
-      _offset += details.focalPointDelta;
-    });
-  }
-
+  
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onDoubleTap: _onDoubleTap,
-      onScaleUpdate: _onScaleUpdate,
-      child: Listener(
-        onPointerSignal: (pointerSignal) {
-          if (pointerSignal is PointerScrollEvent) {
-            setState(() {
-              final double delta = pointerSignal.scrollDelta.dy < 0 ? 0.1 : -0.1;
-              _scale = (_scale + delta).clamp(0.5, 3.0);
-            });
-          }
-        },
-        child: AnimatedScale(
-          scale: _scale,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          child: Transform.translate(
-            offset: _offset,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _showControls = true),
+      onExit: (_) => setState(() => _showControls = false),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 图片显示
+          AnimatedScale(
+            scale: _scale,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
             child: Image.file(
               widget.imageFile,
               errorBuilder: (context, error, stackTrace) => widget.errorWidget,
             ),
           ),
-        ),
+          
+          // 缩放控制按钮
+          if (_showControls)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Column(
+                children: [
+                  // 放大按钮
+                  FloatingActionButton.small(
+                    heroTag: "zoom_in_${widget.imageFile.path}",
+                    onPressed: _zoomIn,
+                    backgroundColor: Colors.white.withOpacity(0.8),
+                    foregroundColor: Colors.black87,
+                    elevation: 4,
+                    child: const Icon(Icons.add),
+                  ),
+                  const SizedBox(height: 8),
+                  // 缩小按钮
+                  FloatingActionButton.small(
+                    heroTag: "zoom_out_${widget.imageFile.path}",
+                    onPressed: _zoomOut,
+                    backgroundColor: Colors.white.withOpacity(0.8),
+                    foregroundColor: Colors.black87,
+                    elevation: 4,
+                    child: const Icon(Icons.remove),
+                  ),
+                  const SizedBox(height: 8),
+                  // 重置按钮
+                  FloatingActionButton.small(
+                    heroTag: "zoom_reset_${widget.imageFile.path}",
+                    onPressed: _resetZoom,
+                    backgroundColor: Colors.white.withOpacity(0.8),
+                    foregroundColor: Colors.black87,
+                    elevation: 4,
+                    child: const Icon(Icons.refresh),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
