@@ -297,39 +297,52 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
-                      ),
-                      // 显示当前评分（如果有）
-                      if (_metadata != null && _metadata!.selfTestScore > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8.0),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade700,
-                              borderRadius: BorderRadius.circular(12),
+                    ),
+                    const Spacer(), // 添加空白区域，将评分和按钮推到右侧
+                    // 显示当前评分（如果有）- 移到右侧
+                    if (_metadata != null && _metadata!.selfTestScore > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: ElevatedButton.icon(
+                          onPressed: _showSelfTestRatingDialog,
+                          icon: const Icon(Icons.star, size: 16),
+                          label: Text(
+                            '评分: ${_metadata!.selfTestScore}/10',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
                             ),
-                            child: Text(
-                              '评分: ${_metadata!.selfTestScore}/10',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
                             ),
                           ),
                         ),
-                    const Spacer(), // 添加空白区域，将按钮推到右侧
+                      ),
                     // 添加自测评价按钮
                     ElevatedButton.icon(
                       onPressed: _showSelfTestRatingDialog,
                       icon: const Icon(Icons.rate_review, size: 16),
-                      label: const Text('自测评价'),
+                      label: const Text(
+                        '自测评价',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue.shade700,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        textStyle: const TextStyle(fontSize: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                       ),
                     ),
                   ],
