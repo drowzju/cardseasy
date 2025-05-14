@@ -107,7 +107,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
               onPressed: _showSelfTestRatingDialog,
               icon: const Icon(Icons.rate_review),
               label: const Text('自测评价'),
-              backgroundColor: Theme.of(context).colorScheme.secondary,
+              backgroundColor: Colors.white,
             )
           : null,
     );
@@ -211,14 +211,14 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
       children: [
         Expanded(
           child: Card(
-            margin: const EdgeInsets.all(16.0),
+            margin: const EdgeInsets.fromLTRB(8,8,8,8),
             elevation: 4,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 预览区域标题栏
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                   child: Row(
                     children: [
                       const Icon(Icons.preview, size: 24),
@@ -271,14 +271,14 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
       children: [
         Expanded(
           child: Card(
-            margin: const EdgeInsets.all(16.0),
+            margin: const EdgeInsets.fromLTRB(8, 8, 8, 8),
             elevation: 4,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 自测区域标题栏
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                   child: Row(
                     children: [
                       const Icon(Icons.quiz, size: 24),
@@ -377,7 +377,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
             },
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
                 borderRadius:
@@ -390,8 +390,9 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
                         ? Icons.keyboard_arrow_down
                         : Icons.keyboard_arrow_right,
                     color: Colors.purple.shade700,
+                    size: 18,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Text(
                     '整体概念',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -496,7 +497,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
           },
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
             color: Colors.grey.shade50,
             child: Row(
               children: [
@@ -505,8 +506,9 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
                       ? Icons.keyboard_arrow_down
                       : Icons.keyboard_arrow_right,
                   color: _getSectionColor(parentTitle),
+                  size: 18,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     section.title,
@@ -521,7 +523,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
                     _sectionVisibility[section.title]!
                         ? Icons.visibility
                         : Icons.visibility_off,
-                    size: 20,
+                    size: 18,
                     color: Colors.grey.shade600,
                   ),
                   onPressed: () {
