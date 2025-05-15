@@ -707,7 +707,11 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   Widget _buildPreviewSection() {
     // 计算卡片目录路径
     String? cardDirPath;
-    if (widget.initialSaveDirectory != null && _titleController.text.isNotEmpty) {
+    if (widget.isEditMode && widget.initialSaveDirectory != null) {
+      // 编辑模式下，直接使用原始目录路径
+      cardDirPath = widget.initialSaveDirectory;
+    } else if (widget.initialSaveDirectory != null && _titleController.text.isNotEmpty) {
+      // 创建模式下，基于标题计算目录路径
       final String cardDirName = _sanitizeFileName(_titleController.text);
       cardDirPath = path.join(widget.initialSaveDirectory!, cardDirName);
     }
