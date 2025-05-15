@@ -59,11 +59,13 @@ class CardService {
           
           if (await mdFile.exists()) {
             // 读取MD文件内容
-            final content = await mdFile.readAsString();
+            //final content = await mdFile.readAsString();
             // 创建卡片模型
+            //开始不必把内容放进去
+            
             final card = CardModel(
               title: dirName,
-              content: content,
+              content: "",
               filePath: mdFilePath,
             );
             cards.add(card);

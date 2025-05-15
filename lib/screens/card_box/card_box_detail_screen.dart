@@ -10,6 +10,7 @@ import '../../widgets/card_list_view.dart';
 import '../../widgets/empty_card_view.dart';
 import '../card/card_create_screen.dart';
 import '../card/card_preview_screen.dart';  // 添加导入
+import '../../utils/card_parser.dart';
 
 class CardBoxDetailScreen extends StatefulWidget {
   final CardBox cardBox;
@@ -208,7 +209,8 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
     );
   }
   
-  void _viewCard(CardModel card) {
+  Future<void> _viewCard(CardModel card) async {
+    card.content = await CardParser.getCardContent(card.filePath);
     Navigator.push(
       context,
       MaterialPageRoute(
