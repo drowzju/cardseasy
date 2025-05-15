@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'dart:io';
 import '../widgets/markdown_renderer.dart';
+import 'package:path/path.dart' as path;
 
 class CardPreviewPanel extends StatelessWidget {
   final String title;
-  final String content;
-  final List<String> imageFiles;
+  final String content;  
+  final String? cardDirectoryPath; // 添加卡片目录路径参数
   
   const CardPreviewPanel({
     super.key,
     required this.title,
-    required this.content,
-    required this.imageFiles,
+    required this.content,    
+    this.cardDirectoryPath, // 添加卡片目录路径参数
   });
   
   @override
@@ -59,6 +60,7 @@ class CardPreviewPanel extends StatelessWidget {
                     MarkdownRenderer(
                       data: content,
                       selectable: true,
+                      cardDirectoryPath: cardDirectoryPath, // 传递卡片目录路径
                     ),
                   ],
                 ),

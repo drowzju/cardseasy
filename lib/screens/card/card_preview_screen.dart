@@ -261,6 +261,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                         MarkdownRenderer(
                           data: widget.card.content,
                           selectable: true,
+                          cardDirectoryPath: path.dirname(widget.card.filePath),
                         ),
                       ],
                     ),
@@ -468,6 +469,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
               child: MarkdownRenderer(
                 data: conceptSection.content,
                 textStyle: Theme.of(context).textTheme.bodyLarge,
+                cardDirectoryPath: path.dirname(widget.card.filePath),
               ),
             ),
             secondChild: const SizedBox.shrink(),
@@ -609,6 +611,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
             child: MarkdownRenderer(
               data: section.content,
               textStyle: Theme.of(context).textTheme.bodyLarge,
+              cardDirectoryPath: path.dirname(widget.card.filePath),
             ),
           ),
           secondChild: const SizedBox.shrink(),

@@ -2,12 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/gestures.dart';
+import 'package:path/path.dart' as path;
 
 class MarkdownRenderer extends StatelessWidget {
   final String data;
   final bool selectable;
   final TextStyle? textStyle;
   final MarkdownStyleSheet? customStyleSheet;
+  final String? cardDirectoryPath; // 添加卡片目录路径参数
   
   const MarkdownRenderer({
     super.key,
@@ -15,22 +17,70 @@ class MarkdownRenderer extends StatelessWidget {
     this.selectable = true,
     this.textStyle,
     this.customStyleSheet,
+    this.cardDirectoryPath, // 添加卡片目录路径参数
   });
+  
+  // 处理Obsidian风格的链接
+  String _processObsidianLinks(String markdown) {
+    // 匹配Obsidian风格的图片链接: ![[filename.png]]
+    final RegExp obsidianImgRegExp = RegExp(r'!\[\[(.*?)\]\]');
+    
+    return markdown.replaceAllMapped(obsidianImgRegExp, (Match match) {
+      final String fileName = match.group(1) ?? '';
+      if (fileName.isEmpty) return match.group(0) ?? '';
+      
+
+      // 如果有卡片目录路径，使用相对路径，否则使用文件名
+      if (cardDirectoryPath != null && cardDirectoryPath!.isNotEmpty) {
+        final String imagePath = path.join(cardDirectoryPath!, fileName);
+        final File imageFile = File(imagePath);
+        if (imageFile.existsSync()) {
+          // 转换为标准Markdown格式
+          return '![${path.basenameWithoutExtension(fileName)}](${imageFile.uri.toString()})';
+        }
+      }
+      
+      // 如果找不到文件或没有目录路径，保持原样
+      return match.group(0) ?? '';
+    });
+  }
   
   @override
   Widget build(BuildContext context) {
+    // 处理Obsidian风格的链接
+    final String processedData = _processObsidianLinks(data);
+    
     return MarkdownBody(
-      data: data,
+      data: processedData,
       selectable: selectable,
       imageBuilder: (uri, title, alt) {
         try {
-          final filePath = uri.toFilePath();
+          String filePath;
+          
+          // 处理不同类型的路径
+          if (uri.scheme == 'file') {
+            // 文件协议路径
+            filePath = uri.toFilePath();
+          } else if (uri.path.isNotEmpty && cardDirectoryPath != null && cardDirectoryPath!.isNotEmpty) {
+            // 相对路径，结合卡片目录
+            filePath = path.join(cardDirectoryPath!, uri.path);
+          } else {
+            // 其他情况，直接使用路径
+            filePath = uri.path;
+          }
+          
+          // 检查文件是否存在
+          final File imageFile = File(filePath);
+          if (!imageFile.existsSync()) {
+            return Text('图片不存在: $filePath');
+          }
+          
           return ZoomableImage(
-            imageFile: File(filePath),
+            imageFile: imageFile,
             errorWidget: const Icon(Icons.broken_image),
           );
         } catch (e) {
-          return Text('图片加载失败: ${uri.path}');
+          return Text('图片加载失败: ${uri.path} (错误: $e)');
         }
       },
       styleSheet: customStyleSheet ?? _getDefaultStyleSheet(context),

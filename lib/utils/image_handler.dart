@@ -8,11 +8,31 @@ class ImageHandler {
   static Future<void> selectAndProcessImage({
     required TextEditingController contentController,
     required String? saveDirectory,
-    required List<String> imageFiles,
-    required Function(String) showErrorDialog,
-    required Function(List<String>) updateImageFiles,
+    required String? cardTitle,    
+    required Function(String) showErrorDialog,    
+    bool useObsidianStyle = true, // 添加参数控制是否使用Obsidian风格
   }) async {
     try {
+      // 检查保存目录和卡片标题
+      if (saveDirectory == null) {
+        showErrorDialog('请先选择保存目录');
+        return;
+      }
+      
+      if (cardTitle == null || cardTitle.trim().isEmpty) {
+        showErrorDialog('请先输入卡片标题');
+        return;
+      }
+      
+      // 创建卡片目录
+      final String cardDirName = _sanitizeFileName(cardTitle);
+      final String cardDirPath = path.join(saveDirectory, cardDirName);
+      final Directory cardDir = Directory(cardDirPath);
+      
+      if (!await cardDir.exists()) {
+        await cardDir.create(recursive: true);
+      }
+
       // 选择图片文件
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.image,
@@ -30,22 +50,24 @@ class ImageHandler {
         return;
       }
 
-      // 直接使用原始图片路径，不再复制到本地目录
-      final String absolutePath = filePath;
+      // 复制图片到卡片目录
+      final String fileName = path.basename(filePath);
+      final String destPath = path.join(cardDirPath, fileName);
       
-      // 更新图片文件列表
-      final List<String> updatedImageFiles = List<String>.from(imageFiles);
-      updatedImageFiles.add(absolutePath);
-      updateImageFiles(updatedImageFiles);
+      // 如果目标路径与源路径不同，则复制文件
+      if (filePath != destPath) {
+        await File(filePath).copy(destPath);
+      }                  
       
-      // 在编辑器中插入Markdown格式的图片链接
-      // 使用正确的URI格式，确保Windows路径能被正确解析
-      final File imageFile = File(absolutePath);
-      final String fileName = path.basename(absolutePath);
-      
-      // 创建正确的URI格式
-      final Uri fileUri = imageFile.uri;
-      final String markdownImageLink = '![${path.basenameWithoutExtension(fileName)}](${fileUri.toString()})';
+      // 根据选择的风格创建图片链接
+      String markdownImageLink;
+      if (useObsidianStyle) {
+        // Obsidian风格的链接
+        markdownImageLink = '![[${fileName}]]';
+      } else {
+        // 标准Markdown风格的链接
+        markdownImageLink = '![${path.basenameWithoutExtension(fileName)}](${fileName})';
+      }
       
       // 获取当前光标位置
       final TextSelection selection = contentController.selection;
@@ -68,5 +90,12 @@ class ImageHandler {
     } catch (e) {
       showErrorDialog('处理图片时出错: $e');
     }
+  }
+  
+  // 清理文件名
+  static String _sanitizeFileName(String name) {
+    return name
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
+        .replaceAll(RegExp(r'\s+'), '_');
   }
 }

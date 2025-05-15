@@ -8,8 +8,7 @@ class CardSaver {
   static Future<bool> saveCard({
     required String title,
     required String fullMarkdown,
-    required String? saveDirectory,
-    required List<String> imageFiles,
+    required String? saveDirectory,    
     required Function(String) showErrorDialog,
   }) async {
     if (saveDirectory == null) {
@@ -32,21 +31,11 @@ class CardSaver {
         await cardDir.create(recursive: true);
       }
 
-      // 不再创建单独的图片目录，直接使用卡片目录
-      final String imagesDirPath = cardDirPath;
-
-      // 复制图片到目标目录
-      for (String imagePath in imageFiles) {
-        final String fileName = path.basename(imagePath);
-        final String destPath = path.join(imagesDirPath, fileName);
-        
-        if (!imagePath.startsWith(imagesDirPath)) {
-          await File(imagePath).copy(destPath);
-        }
-      }
-
-      // 更新Markdown中的图片链接，传入绝对路径
-      String updatedMarkdown = _updateImageLinks(fullMarkdown, imageFiles, imagesDirPath);
+      // 更新Markdown中的图片链接
+      String updatedMarkdown = _updateImageLinks(fullMarkdown);
+      
+      // 转换为Obsidian风格的链接
+      updatedMarkdown = _convertToObsidianLinks(updatedMarkdown);
 
       // 保存为单个markdown文件
       final File cardFile = File(path.join(cardDirPath, '$cardDirName.md'));
@@ -60,14 +49,18 @@ class CardSaver {
   }
 
   // 更新Markdown中的图片链接
-  static String _updateImageLinks(String markdown, List<String> imageFiles, String imagesDirPath) {
-    // 创建文件名到路径的映射，便于快速查找
-    final Map<String, String> fileNameToPath = {};
-    for (String imagePath in imageFiles) {
-      final String fileName = path.basename(imagePath);
-      fileNameToPath[fileName] = imagePath;
-    }
-
+  static String _updateImageLinks(String markdown) {
+    // 处理标准Markdown格式的图片链接
+    String updatedMarkdown = _updateStandardImageLinks(markdown);
+    
+    // 处理Obsidian风格的图片链接
+    updatedMarkdown = _updateObsidianImageLinks(updatedMarkdown);
+    
+    return updatedMarkdown;
+  }
+  
+  // 处理标准Markdown格式的图片链接
+  static String _updateStandardImageLinks(String markdown) {
     // 匹配Markdown中的图片链接: ![alt](path)
     final RegExp imgRegExp = RegExp(r'!\[(.*?)\]\((.*?)\)');
     
@@ -92,63 +85,48 @@ class CardSaver {
       // 获取文件名
       final String fileName = path.basename(imgPath);
       
-      // 检查这个文件是否在我们的图片列表中（通过文件名比较）
-      if (fileNameToPath.containsKey(fileName)) {
-        // 使用绝对路径
-        final String absolutePath = path.join(imagesDirPath, fileName);
-        // 直接使用新的编码方法
-        return '![$altText](${_encodePathForMarkdown(absolutePath)})';
-      }
-      
-      // 如果找不到精确匹配，尝试通过部分匹配查找
-      for (String key in fileNameToPath.keys) {
-        if (key.contains(fileName) || fileName.contains(key)) {
-          // 使用绝对路径
-          final String absolutePath = path.join(imagesDirPath, key);
-          // 直接使用新的编码方法
-          return '![$altText](${_encodePathForMarkdown(absolutePath)})';
-        }
-      }
-      
-      // 如果不在图片列表中，保持原样
-      return match.group(0) ?? '';
+      // 直接使用文件名作为相对路径
+      return '![$altText]($fileName)';
     });
   }
-
-  // 对路径进行编码，适用于Markdown中的图片链接
-  static String _encodePathForMarkdown(String pathStr) {
-    // 首先确保使用Windows风格的反斜杠
-    String normalizedPath = pathStr.replaceAll('/', '\\');
+  
+  // 处理Obsidian风格的图片链接
+  static String _updateObsidianImageLinks(String markdown) {
+    // 匹配Obsidian风格的图片链接: ![[filename.png]]
+    final RegExp obsidianImgRegExp = RegExp(r'!\[\[(.*?)\]\]');
     
-    // 处理驱动器部分（如D:）
-    final RegExp driveRegex = RegExp(r'^([A-Za-z]:)(.*)$');
-    final Match? driveMatch = driveRegex.firstMatch(normalizedPath);
-    
-    if (driveMatch != null) {
-      String drive = driveMatch.group(1) ?? '';
-      String remainingPath = driveMatch.group(2) ?? '';
+    return markdown.replaceAllMapped(obsidianImgRegExp, (Match match) {
+      final String fileName = match.group(1) ?? '';
       
-      // 确保驱动器后有斜杠
-      if (!remainingPath.startsWith('\\')) {
-        remainingPath = '\\' + remainingPath;
+      // 已经是正确的格式，保持不变
+      return '![[${fileName}]]';
+    });
+  }
+  
+  // 将标准Markdown链接转换为Obsidian风格
+  static String _convertToObsidianLinks(String markdown) {
+    // 匹配标准Markdown中的图片链接: ![alt](filename.png)
+    final RegExp imgRegExp = RegExp(r'!\[(.*?)\]\((.*?)\)');
+    
+    return markdown.replaceAllMapped(imgRegExp, (Match match) {
+      String imgPath = match.group(2) ?? '';
+      
+      // 如果是文件协议路径，提取文件名
+      if (imgPath.startsWith('file:///')) {
+        imgPath = path.basename(Uri.decodeFull(imgPath.substring(8)));
+      } else if (imgPath.startsWith('file://')) {
+        imgPath = path.basename(Uri.decodeFull(imgPath.substring(7)));
+      } else if (!imgPath.contains('/') && !imgPath.contains('\\')) {
+        // 如果是简单文件名，直接使用
+        // 不做处理
+      } else {
+        // 其他情况，提取文件名
+        imgPath = path.basename(imgPath);
       }
       
-      // 将路径拆分为组件
-      List<String> components = remainingPath.split('\\');
-      components = components.where((c) => c.isNotEmpty).toList();
-      
-      // 对每个组件进行编码
-      for (int i = 0; i < components.length; i++) {
-        components[i] = Uri.encodeComponent(components[i]);
-      }
-      
-      // 重新组合路径，使用正斜杠（URI标准）
-      // 注意：驱动器后必须有斜杠
-      return 'file:///${drive}/${components.join('/')}';
-    } else {
-      // 如果没有驱动器部分，直接编码整个路径
-      return 'file:///${Uri.encodeComponent(normalizedPath).replaceAll('%5C', '/')}';
-    }
+      // 转换为Obsidian风格
+      return '![[${imgPath}]]';
+    });
   }
 
   // 清理文件名

@@ -48,8 +48,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   // 移除 String? _saveDirectory; 变量
-  bool _isSaving = false;
-  final List<String> _imageFiles = [];
+  bool _isSaving = false;  
 
   // 关键知识点列表
   final List<KeyPoint> _keyPoints = [];
@@ -382,26 +381,8 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       await ImageHandler.selectAndProcessImage(
         contentController: currentController,
         saveDirectory: widget.initialSaveDirectory, // 使用传入的初始保存目录
-        imageFiles: _imageFiles,
-        showErrorDialog: _showErrorDialog,
-        updateImageFiles: (files) {
-          if (mounted) {
-            setState(() {
-              _imageFiles.clear();
-              _imageFiles.addAll(files);
-
-              _isConceptExpanded = true;
-              if (_currentKeyPointId != null) {
-                _isKeyPointsExpanded = true;
-                _keyPointExpandedStates[_currentKeyPointId!] = true;
-              }
-              if (_currentUnderstandingId != null) {
-                _isUnderstandingExpanded = true;
-                _understandingExpandedStates[_currentUnderstandingId!] = true;
-              }
-            });
-          }
-        },
+        cardTitle: _titleController.text,        
+        showErrorDialog: _showErrorDialog,        
       );
     } finally {
       if (mounted) {
@@ -486,8 +467,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       final bool success = await CardSaver.saveCard(
         title: _titleController.text,
         fullMarkdown: _generateFullMarkdown(),
-        saveDirectory: saveDirectory,
-        imageFiles: _imageFiles,
+        saveDirectory: saveDirectory,        
         showErrorDialog: _showErrorDialog,        
       );
 
@@ -725,11 +705,25 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
 
   // 构建预览区域
   Widget _buildPreviewSection() {
+    // 计算卡片目录路径
+    String? cardDirPath;
+    if (widget.initialSaveDirectory != null && _titleController.text.isNotEmpty) {
+      final String cardDirName = _sanitizeFileName(_titleController.text);
+      cardDirPath = path.join(widget.initialSaveDirectory!, cardDirName);
+    }
+    
     return CardPreviewPanel(
       title: _titleController.text,
-      content: _generateFullMarkdown(),
-      imageFiles: _imageFiles,
+      content: _generateFullMarkdown(),      
+      cardDirectoryPath: cardDirPath,
     );
+  }
+  
+  // 清理文件名（与 ImageHandler 中保持一致）
+  String _sanitizeFileName(String name) {
+    return name
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
+        .replaceAll(RegExp(r'\s+'), '_');
   }
 
   // 生成完整的Markdown内容
