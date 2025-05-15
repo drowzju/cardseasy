@@ -644,6 +644,10 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                             },
                             onFormatSelected: _insertMarkdownFormat,
                             onImageSelected: _selectImage,
+                            saveDirectory: widget.isEditMode
+                                ? widget.initialSaveDirectory
+                                : path.join(widget.initialSaveDirectory!,
+                                    _sanitizeFileName(_titleController.text)),
                           )
                         : const SizedBox.shrink(),
                   ),

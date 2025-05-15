@@ -16,6 +16,7 @@ class UnderstandingList extends StatelessWidget {
   final Function(String) onUnderstandingToggleExpanded;
   final Function(String) onFormatSelected;
   final VoidCallback onImageSelected;
+  final String? saveDirectory; // 添加保存目录参数  
 
   const UnderstandingList({
     super.key,
@@ -29,11 +30,11 @@ class UnderstandingList extends StatelessWidget {
     required this.onUnderstandingToggleExpanded,
     required this.onFormatSelected,
     required this.onImageSelected,
+    required this.saveDirectory, // 传递保存目录参数
   });
 
   @override
   Widget build(BuildContext context) {
-
     return Container(
       constraints: const BoxConstraints(minHeight: 100, maxHeight: 400),
       child: ListView.builder(
@@ -41,7 +42,8 @@ class UnderstandingList extends StatelessWidget {
         itemCount: understandings.length,
         itemBuilder: (context, index) {
           final understanding = understandings[index];
-          final isExpanded = understandingExpandedStates[understanding.id] ?? true;
+          final isExpanded =
+              understandingExpandedStates[understanding.id] ?? true;
           final isSelected = currentUnderstandingId == understanding.id;
           final controller = understandingControllers[understanding.id];
 
@@ -54,7 +56,8 @@ class UnderstandingList extends StatelessWidget {
                 title: Row(
                   children: [
                     InkWell(
-                      onTap: () => onUnderstandingToggleExpanded(understanding.id),
+                      onTap: () =>
+                          onUnderstandingToggleExpanded(understanding.id),
                       child: SvgPicture.asset(
                         isExpanded
                             ? 'assets/icons/expand_less.svg'
@@ -72,7 +75,8 @@ class UnderstandingList extends StatelessWidget {
                       child: Text(
                         understanding.title,
                         style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                           color: isSelected
                               ? Theme.of(context).colorScheme.primary
                               : null,
@@ -100,26 +104,51 @@ class UnderstandingList extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             MarkdownToolbar(
-                              currentEditMode: isSelected ? currentEditMode : 'text',
-                              onFormatSelected: (format) => onFormatSelected(format),
+                              currentEditMode:
+                                  isSelected ? currentEditMode : 'text',
+                              onFormatSelected: (format) =>
+                                  onFormatSelected(format),
                               onImageSelected: onImageSelected,
                             ),
                             const SizedBox(height: 8),
-                            TextField(
-                              controller: controller,
-                              maxLines: null,
-                              minLines: 3,
-                              decoration: InputDecoration(
-                                hintText: '输入理解与关联内容...',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                            KeyboardListener(
+                              focusNode: FocusNode(),
+                              onKeyEvent: (KeyEvent event) {
+                                // 检测Ctrl+V组合键
+                                if (event is KeyDownEvent &&
+                                    event.logicalKey ==
+                                        LogicalKeyboardKey.keyV &&
+                                    HardwareKeyboard
+                                        .instance.isControlPressed) {
+                                  // 尝试处理粘贴的图片
+                                  if (saveDirectory != null) {
+                                    ImageHandler.handlePastedImage(
+                                        contentController:
+                                            understandingControllers[understanding.id]!,
+                                        saveDirectory: saveDirectory);
+                                  }
+                                }
+                              },
+                              child: TextField(
+                                controller: controller,
+                                maxLines: null,
+                                minLines: 3,
+                                decoration: InputDecoration(
+                                  hintText: '输入理解与关联内容...',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  filled: isSelected,
+                                  fillColor: isSelected
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer
+                                          .withOpacity(0.3)
+                                      : null,
                                 ),
-                                filled: isSelected,
-                                fillColor: isSelected
-                                    ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
-                                    : null,
+                                onTap: () =>
+                                    onUnderstandingSelected(understanding.id),
                               ),
-                              onTap: () => onUnderstandingSelected(understanding.id),
                             ),
                           ],
                         ),
