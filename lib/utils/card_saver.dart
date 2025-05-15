@@ -10,7 +10,7 @@ class CardSaver {
     required String fullMarkdown,
     required String? saveDirectory,    
     required Function(String) showErrorDialog,
-  }) async {
+  }) async {    
     if (saveDirectory == null) {
       showErrorDialog('请先选择保存目录');
       return false;
@@ -31,15 +31,9 @@ class CardSaver {
         await cardDir.create(recursive: true);
       }
 
-      // 更新Markdown中的图片链接
-      String updatedMarkdown = _updateImageLinks(fullMarkdown);
-      
-      // 转换为Obsidian风格的链接
-      updatedMarkdown = _convertToObsidianLinks(updatedMarkdown);
-
       // 保存为单个markdown文件
-      final File cardFile = File(path.join(cardDirPath, '$cardDirName.md'));
-      await cardFile.writeAsString(updatedMarkdown);
+      final File cardFile = File(path.join(cardDirPath, '$cardDirName.md'));      
+      await cardFile.writeAsString(fullMarkdown);
 
       return true;
     } catch (e) {

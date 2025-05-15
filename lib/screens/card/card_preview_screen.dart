@@ -750,8 +750,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => CardCreateScreen(
-          initialSaveDirectory: path.dirname(widget.card.filePath),
-          initialTitle: widget.card.title,
+          initialSaveDirectory: path.dirname(widget.card.filePath),          
           initialContent: conceptContent,
           initialKeyPoints: keyPoints,
           initialUnderstandings: understandings,

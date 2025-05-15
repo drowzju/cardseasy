@@ -24,7 +24,6 @@ import 'package:path/path.dart' as path;
 
 class CardCreateScreen extends StatefulWidget {
   final String? initialSaveDirectory;
-  final String? initialTitle; // 添加初始标题
   final String? initialContent; // 添加初始内容
   final List<KeyPoint>? initialKeyPoints; // 添加初始关键知识点
   final List<Understanding>? initialUnderstandings; // 添加初始理解与关联
@@ -33,7 +32,6 @@ class CardCreateScreen extends StatefulWidget {
   const CardCreateScreen({
     super.key,
     this.initialSaveDirectory,
-    this.initialTitle,
     this.initialContent,
     this.initialKeyPoints,
     this.initialUnderstandings,
@@ -48,7 +46,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   // 移除 String? _saveDirectory; 变量
-  bool _isSaving = false;  
+  bool _isSaving = false;
 
   // 关键知识点列表
   final List<KeyPoint> _keyPoints = [];
@@ -77,11 +75,6 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   @override
   void initState() {
     super.initState();
-
-    // 初始化编辑数据
-    if (widget.isEditMode && widget.initialTitle != null) {
-      _titleController.text = widget.initialTitle!;
-    }
 
     if (widget.isEditMode && widget.initialContent != null) {
       _contentController.text = widget.initialContent!;
@@ -381,8 +374,8 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       await ImageHandler.selectAndProcessImage(
         contentController: currentController,
         saveDirectory: widget.initialSaveDirectory, // 使用传入的初始保存目录
-        cardTitle: _titleController.text,        
-        showErrorDialog: _showErrorDialog,        
+        cardTitle: _titleController.text,
+        showErrorDialog: _showErrorDialog,
       );
     } finally {
       if (mounted) {
@@ -436,9 +429,9 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   }
 
   // 保存卡片
-  Future<void> _saveCard() async {
-    if (_titleController.text.trim().isEmpty) {
-      _showErrorDialog('请输入卡片标题');
+  Future<void> _saveCard() async {    
+    if ((!widget.isEditMode)&&(_titleController.text.trim().isEmpty)) {
+      _showErrorDialog('请输入卡片标题');      
       return;
     }
 
@@ -449,26 +442,16 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     try {
       // 如果是编辑模式，使用卡片盒目录而不是卡片目录作为保存目录
       String? saveDirectory = widget.initialSaveDirectory;
-      
+
       if (widget.isEditMode && saveDirectory != null) {
-        // 检查当前目录是否已经是卡片目录（以卡片标题命名）
-        final sanitizedTitle = _titleController.text
-            .replaceAll(RegExp(r'[<>:"\\|?*]'), '_')
-            .replaceAll(RegExp(r'\s+'), '_');
-            
-        final dirName = path.basename(saveDirectory);
-        
-        // 如果当前目录已经是卡片目录，则使用其父目录
-        if (dirName == sanitizedTitle) {
-          saveDirectory = path.dirname(saveDirectory);
-        }
+        saveDirectory = path.dirname(saveDirectory);        
       }
-      
+
       final bool success = await CardSaver.saveCard(
-        title: _titleController.text,
+        title: widget.isEditMode?path.basename(widget.initialSaveDirectory!):_titleController.text,
         fullMarkdown: _generateFullMarkdown(),
-        saveDirectory: saveDirectory,        
-        showErrorDialog: _showErrorDialog,        
+        saveDirectory: saveDirectory,
+        showErrorDialog: _showErrorDialog,
       );
 
       if (success) {
@@ -488,30 +471,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       }
     }
   }
-
-  // 添加卡片有效性检查
-  bool _validateCard() {
-    if (_titleController.text.trim().isEmpty) {
-      _showErrorDialog('请输入卡片标题');
-      return false;
-    }
-
-    // 检查标题是否包含非法字符
-    final RegExp illegalChars = RegExp(r'[<>:"/\\|?*]');
-    if (illegalChars.hasMatch(_titleController.text)) {
-      _showErrorDialog('标题包含非法字符: < > : " / \\ | ? *');
-      return false;
-    }
-
-    // 检查内容是否为空
-    if (_contentController.text.trim().isEmpty && _keyPoints.isEmpty) {
-      _showErrorDialog('请添加卡片内容或至少一个关键知识点');
-      return false;
-    }
-
-    return true;
-  }
-
+  
   // 显示错误对话框
   void _showErrorDialog(String message) {
     showDialog(
@@ -588,6 +548,10 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
               onFormatSelected: _insertMarkdownFormat,
               onImageSelected: _selectImage,
               onTap: _switchToConceptEditing,
+              saveDirectory: widget.isEditMode
+                  ? widget.initialSaveDirectory
+                  : path.join(widget.initialSaveDirectory!,
+                      _sanitizeFileName(_titleController.text)),
             ),
             Card(
               margin: const EdgeInsets.fromLTRB(16, 8, 8, 16),
@@ -710,19 +674,20 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
     if (widget.isEditMode && widget.initialSaveDirectory != null) {
       // 编辑模式下，直接使用原始目录路径
       cardDirPath = widget.initialSaveDirectory;
-    } else if (widget.initialSaveDirectory != null && _titleController.text.isNotEmpty) {
+    } else if (widget.initialSaveDirectory != null &&
+        _titleController.text.isNotEmpty) {
       // 创建模式下，基于标题计算目录路径
       final String cardDirName = _sanitizeFileName(_titleController.text);
       cardDirPath = path.join(widget.initialSaveDirectory!, cardDirName);
     }
-    
+
     return CardPreviewPanel(
       title: _titleController.text,
-      content: _generateFullMarkdown(),      
+      content: _generateFullMarkdown(),
       cardDirectoryPath: cardDirPath,
     );
   }
-  
+
   // 清理文件名（与 ImageHandler 中保持一致）
   String _sanitizeFileName(String name) {
     return name

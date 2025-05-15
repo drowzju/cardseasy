@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
+import 'package:intl/intl.dart';
+import 'dart:typed_data';
+import 'package:pasteboard/pasteboard.dart';
 
 class ImageHandler {
   /// 选择并处理图片
@@ -97,5 +101,72 @@ class ImageHandler {
     return name
         .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
         .replaceAll(RegExp(r'\s+'), '_');
+  }
+
+  /// 处理粘贴的图片
+  static Future<bool> handlePastedImage({
+    required TextEditingController contentController,
+    required String? saveDirectory,    
+    bool useObsidianStyle = true,
+  }) async {
+    try {      
+      // 尝试从剪贴板获取图片数据
+      final Uint8List? imageBytes = await Pasteboard.image;
+      if (imageBytes == null || imageBytes.isEmpty) {
+        return false; // 剪贴板中没有图片数据
+      }      
+      // 检查保存目录和卡片标题
+      if (saveDirectory == null) {        
+        return false;
+      }
+      // 创建卡片目录      
+      final Directory cardDir = Directory(saveDirectory);
+      
+      if (!await cardDir.exists()) {
+        await cardDir.create(recursive: true);
+      }
+
+      // 生成唯一的文件名（使用时间戳）
+      final String timestamp = DateFormat('yyyyMMddHHmmss').format(DateTime.now());
+      final String fileName = 'Pasted_image_$timestamp.png';
+      final String destPath = path.join(saveDirectory, fileName);
+      
+      // 保存图片到卡片目录
+      await File(destPath).writeAsBytes(imageBytes);
+      
+      // 根据选择的风格创建图片链接
+      String markdownImageLink;
+      if (useObsidianStyle) {
+        // Obsidian风格的链接
+        markdownImageLink = '![[${fileName}]]';
+      } else {
+        // 标准Markdown风格的链接
+        markdownImageLink = '![${path.basenameWithoutExtension(fileName)}](${fileName})';
+      }
+      
+      // 获取当前光标位置
+      final TextSelection selection = contentController.selection;
+      final String currentText = contentController.text;
+      
+      // 在光标位置插入图片链接
+      final String newText = currentText.replaceRange(
+        selection.baseOffset, 
+        selection.extentOffset, 
+        markdownImageLink
+      );
+      
+      // 更新编辑器内容
+      contentController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(
+          offset: selection.baseOffset + markdownImageLink.length
+        ),
+      );
+      
+      return true;
+    } catch (e) {
+      print(e);
+      return false;
+    }
   }
 }

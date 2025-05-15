@@ -23,6 +23,7 @@ environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
+  pasteboard: ^0.4.0  # 用于处理剪贴板图片数据
   flutter:
     sdk: flutter
   flutter_svg: ^2.0.7  # 添加SVG支持

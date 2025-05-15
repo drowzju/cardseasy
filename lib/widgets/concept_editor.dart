@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'markdown_toolbar.dart';
+import '../utils/image_handler.dart';
 
 class ConceptEditor extends StatelessWidget {
   final bool isExpanded;
@@ -10,7 +12,8 @@ class ConceptEditor extends StatelessWidget {
   final Function(String) onFormatSelected;
   final VoidCallback onImageSelected;
   final VoidCallback onTap;
-  final String? tooltip; // 添加提示文本参数
+  final String? tooltip;
+  final String? saveDirectory; // 添加保存目录参数  
 
   const ConceptEditor({
     super.key,
@@ -21,7 +24,8 @@ class ConceptEditor extends StatelessWidget {
     required this.onFormatSelected,
     required this.onImageSelected,
     required this.onTap,
-    this.tooltip, // 添加提示文本参数
+    this.tooltip,
+    this.saveDirectory, // 添加保存目录参数
   });
 
   @override
@@ -86,17 +90,34 @@ class ConceptEditor extends StatelessWidget {
                           onImageSelected: onImageSelected,
                         ),
                         const SizedBox(height: 8),
-                        TextField(
-                          controller: contentController,
-                          maxLines: null,
-                          minLines: 5,
-                          decoration: InputDecoration(
-                            hintText: '输入整体概念...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                        KeyboardListener(
+                          focusNode: FocusNode(),
+                          onKeyEvent: (KeyEvent event) {
+                            // 检测Ctrl+V组合键
+                            if (event is KeyDownEvent &&
+                                event.logicalKey == LogicalKeyboardKey.keyV &&
+                                HardwareKeyboard.instance.isControlPressed) {                                                                                      
+                              // 尝试处理粘贴的图片
+                              if (saveDirectory != null) {                                
+                                ImageHandler.handlePastedImage(
+                                  contentController: contentController,
+                                  saveDirectory: saveDirectory                                  
+                                );
+                              }
+                            }
+                          },
+                          child: TextField(
+                            controller: contentController,
+                            maxLines: null,
+                            minLines: 5,
+                            decoration: InputDecoration(
+                              hintText: '输入整体概念...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
+                            onTap: onTap,
                           ),
-                          onTap: onTap,
                         ),
                       ],
                     ),
