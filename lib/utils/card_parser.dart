@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import '../models/key_point.dart';
 import '../models/understanding.dart';
 import 'package:uuid/uuid.dart';
+
 
 class CardParser {
   // 从Markdown内容中解析关键知识点
@@ -78,5 +81,19 @@ class CardParser {
     }
     
     return '';
+  }
+
+  static Future<String> getCardContent(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        return content;
+      }
+      return "";
+    } catch (e) {
+      print('加载卡片失败: $e');
+      return "";
+    }
   }
 }

@@ -757,9 +757,11 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
           isEditMode: true,
         ),
       ),
-    ).then((_) {
+    ).then((_) async {
+      widget.card.content = await CardParser.getCardContent(widget.card.filePath);
       // 刷新卡片内容
-      setState(() {});
+      setState(()  {
+      });
     });
   }
 }
