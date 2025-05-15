@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../models/key_point.dart';
 import 'markdown_toolbar.dart';
+import 'package:flutter/services.dart';
+import '../utils/image_handler.dart';
 
 class KeyPointList extends StatelessWidget {
   final List<KeyPoint> keyPoints;
@@ -14,6 +16,7 @@ class KeyPointList extends StatelessWidget {
   final Function(String) onKeyPointToggleExpanded;
   final Function(String) onFormatSelected;
   final VoidCallback onImageSelected;
+  final String? saveDirectory; // 添加保存目录参数  
 
   const KeyPointList({
     super.key,
@@ -27,12 +30,11 @@ class KeyPointList extends StatelessWidget {
     required this.onKeyPointToggleExpanded,
     required this.onFormatSelected,
     required this.onImageSelected,
+    required this.saveDirectory, // 添加保存目录参数
   });
 
   @override
   Widget build(BuildContext context) {
-
-
     return Container(
       constraints: const BoxConstraints(minHeight: 100, maxHeight: 400),
       child: ListView.builder(
@@ -100,13 +102,29 @@ class KeyPointList extends StatelessWidget {
                       Container(
                         height: 150,
                         margin: const EdgeInsets.only(bottom: 16.0),
-                        child: TextField(
-                          controller: keyPointControllers[keyPoint.id],
-                          maxLines: null,
-                          expands: true,
-                          decoration: const InputDecoration(
-                            hintText: '在这里输入知识点内容。支持文本和图片',
-                            border: OutlineInputBorder(),
+                        child: KeyboardListener(
+                          focusNode: FocusNode(),
+                          onKeyEvent: (KeyEvent event) {
+                            // 检测Ctrl+V组合键
+                            if (event is KeyDownEvent &&
+                                event.logicalKey == LogicalKeyboardKey.keyV &&
+                                HardwareKeyboard.instance.isControlPressed) {
+                              // 尝试处理粘贴的图片
+                              if (saveDirectory != null) {
+                                ImageHandler.handlePastedImage(
+                                    contentController: keyPointControllers[keyPoint.id]!,
+                                    saveDirectory: saveDirectory);
+                              }
+                            }
+                          },
+                          child: TextField(
+                            controller: keyPointControllers[keyPoint.id],
+                            maxLines: null,
+                            expands: true,
+                            decoration: const InputDecoration(
+                              hintText: '在这里输入知识点内容。支持文本和图片',
+                              border: OutlineInputBorder(),
+                            ),
                           ),
                         ),
                       ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../models/understanding.dart';
 import 'markdown_toolbar.dart';
+import 'package:flutter/services.dart';
+import '../utils/image_handler.dart';
 
 class UnderstandingList extends StatelessWidget {
   final List<Understanding> understandings;

@@ -429,9 +429,9 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
   }
 
   // 保存卡片
-  Future<void> _saveCard() async {    
-    if ((!widget.isEditMode)&&(_titleController.text.trim().isEmpty)) {
-      _showErrorDialog('请输入卡片标题');      
+  Future<void> _saveCard() async {
+    if ((!widget.isEditMode) && (_titleController.text.trim().isEmpty)) {
+      _showErrorDialog('请输入卡片标题');
       return;
     }
 
@@ -444,11 +444,13 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       String? saveDirectory = widget.initialSaveDirectory;
 
       if (widget.isEditMode && saveDirectory != null) {
-        saveDirectory = path.dirname(saveDirectory);        
+        saveDirectory = path.dirname(saveDirectory);
       }
 
       final bool success = await CardSaver.saveCard(
-        title: widget.isEditMode?path.basename(widget.initialSaveDirectory!):_titleController.text,
+        title: widget.isEditMode
+            ? path.basename(widget.initialSaveDirectory!)
+            : _titleController.text,
         fullMarkdown: _generateFullMarkdown(),
         saveDirectory: saveDirectory,
         showErrorDialog: _showErrorDialog,
@@ -471,7 +473,7 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
       }
     }
   }
-  
+
   // 显示错误对话框
   void _showErrorDialog(String message) {
     showDialog(
@@ -591,6 +593,10 @@ class _CardCreateScreenState extends State<CardCreateScreen> {
                             },
                             onFormatSelected: _insertMarkdownFormat,
                             onImageSelected: _selectImage,
+                            saveDirectory: widget.isEditMode
+                                ? widget.initialSaveDirectory
+                                : path.join(widget.initialSaveDirectory!,
+                                    _sanitizeFileName(_titleController.text)),
                           )
                         : const SizedBox.shrink(),
                   ),
