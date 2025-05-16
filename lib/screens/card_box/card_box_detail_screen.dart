@@ -9,19 +9,19 @@ import '../../widgets/card_grid_view.dart';
 import '../../widgets/card_list_view.dart';
 import '../../widgets/empty_card_view.dart';
 import '../card/card_create_screen.dart';
-import '../card/card_preview_screen.dart';  // 添加导入
+import '../card/card_preview_screen.dart'; // 添加导入
 import '../../utils/card_parser.dart';
 import '../../utils/metadata_manager.dart';
 import '../../models/card_metadata.dart';
 
 class CardBoxDetailScreen extends StatefulWidget {
   final CardBox cardBox;
-  
+
   const CardBoxDetailScreen({
     super.key,
     required this.cardBox,
   });
-  
+
   @override
   State<CardBoxDetailScreen> createState() => _CardBoxDetailScreenState();
 }
@@ -121,7 +121,8 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
     // 搜索
     if (_searchText.isNotEmpty) {
       cards = cards
-          .where((c) => c.title.toLowerCase().contains(_searchText.toLowerCase()))
+          .where(
+              (c) => c.title.toLowerCase().contains(_searchText.toLowerCase()))
           .toList();
     }
     // 排序
@@ -195,7 +196,8 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
                   children: [
                     const Text('按标题'),
                     if (_sortBy == "title")
-                      Icon(_sortAsc ? Icons.arrow_upward : Icons.arrow_downward, size: 16)
+                      Icon(_sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                          size: 16)
                   ],
                 ),
               ),
@@ -205,7 +207,8 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
                   children: [
                     const Text('按创建时间'),
                     if (_sortBy == "createdAt")
-                      Icon(_sortAsc ? Icons.arrow_upward : Icons.arrow_downward, size: 16)
+                      Icon(_sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                          size: 16)
                   ],
                 ),
               ),
@@ -213,9 +216,10 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
                 value: "selfTestScore",
                 child: Row(
                   children: [
-                    const Text('按复习情况'),
+                    const Text('按自测评价情况'),
                     if (_sortBy == "selfTestScore")
-                      Icon(_sortAsc ? Icons.arrow_upward : Icons.arrow_downward, size: 16)
+                      Icon(_sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                          size: 16)
                   ],
                 ),
               ),
@@ -247,10 +251,18 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _filteredCards.isEmpty
-              ? const EmptyCardView()
+              ? EmptyCardView()
               : _isGridView
-                  ? CardGridView(cards: _filteredCards, onCardTap: _viewCard)
-                  : CardListView(cards: _filteredCards, onCardTap: _viewCard),
+                  ? CardGridView(
+                      cards: _filteredCards,
+                      onCardTap: _viewCard,
+                      cardMetadataMap: _cardMetadataMap, // 添加元数据映射
+                    )
+                  : CardListView(
+                      cards: _filteredCards,
+                      onCardTap: _viewCard,
+                      cardMetadataMap: _cardMetadataMap, // 添加元数据映射
+                    ),
       floatingActionButton: FloatingActionButton(
         onPressed: _createNewCard,
         tooltip: '创建新卡片',
@@ -258,7 +270,7 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
       ),
     );
   }
-  
+
   Future<void> _viewCard(CardModel card) async {
     card.content = await CardParser.getCardContent(card.filePath);
     Navigator.push(
@@ -268,7 +280,7 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
       ),
     );
   }
-  
+
   void _createNewCard() {
     Navigator.push(
       context,
@@ -283,16 +295,15 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
   }
 }
 
-
 class Section {
   final String title;
   final String content;
   final String parentTitle;
   final int level;
-  
+
   Section({
-    required this.title, 
-    required this.content, 
+    required this.title,
+    required this.content,
     this.parentTitle = '',
     required this.level,
   });
