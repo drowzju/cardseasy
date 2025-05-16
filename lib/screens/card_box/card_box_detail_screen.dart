@@ -33,7 +33,7 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
   bool _isLoading = true;
   bool _isGridView = true;
   String _searchText = "";
-  String _sortBy = "title"; // "title"、"createdAt"、"selfTestScore" 或 "lastTestDate"
+  String _sortBy = "selfTestScore"; // 默认按自测情况排序
   bool _sortAsc = true;
   final TextEditingController _searchController = TextEditingController();
   // 存储卡片元数据的映射表
@@ -107,6 +107,23 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
       setState(() {
         _applyFilterAndSort();
       });
+    }
+  }
+
+    // 加载单个卡片的元数据
+  Future<void> _loadCardMetadata(String cardFilePath) async {
+    try {
+      final metadata = await MetadataManager.loadMetadata(
+        cardFilePath: cardFilePath,
+      );
+      if (mounted) {
+        setState(() {
+          _cardMetadataMap[cardFilePath] = metadata;
+          _applyFilterAndSort(); // 更新排序
+        });
+      }
+    } catch (e) {
+      print('加载卡片元数据失败: ${e.toString()}');
     }
   }
 
@@ -298,7 +315,10 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
       MaterialPageRoute(
         builder: (context) => CardPreviewScreen(card: card),
       ),
-    );
+    ).then((_) {
+      // 从卡片预览页面返回时刷新该卡片的元数据
+      _loadCardMetadata(card.filePath);
+    });
   }
 
   void _createNewCard() {
