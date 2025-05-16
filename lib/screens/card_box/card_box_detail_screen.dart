@@ -33,7 +33,7 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
   bool _isLoading = true;
   bool _isGridView = true;
   String _searchText = "";
-  String _sortBy = "title"; // "title"、"createdAt" 或 "selfTestScore"
+  String _sortBy = "title"; // "title"、"createdAt"、"selfTestScore" 或 "lastTestDate"
   bool _sortAsc = true;
   final TextEditingController _searchController = TextEditingController();
   // 存储卡片元数据的映射表
@@ -116,6 +116,12 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
     return metadata?.selfTestScore ?? 6; // 没有自测评分的默认为6分
   }
 
+  // 获取卡片的最后测试日期，如果没有则返回当前时间
+  DateTime _getCardLastTestDate(CardModel card) {
+    final metadata = _cardMetadataMap[card.filePath];
+    return metadata?.lastTestDate ?? DateTime.now();
+  }
+
   void _applyFilterAndSort() {
     List<CardModel> cards = _allCards;
     // 搜索
@@ -136,6 +142,9 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
       } else if (_sortBy == "selfTestScore") {
         // 按自测评分排序，分数低的排前面
         cmp = _getCardSelfTestScore(a).compareTo(_getCardSelfTestScore(b));
+      } else if (_sortBy == "lastTestDate") {
+        // 按最后测试日期排序，日期早的排前面
+        cmp = _getCardLastTestDate(a).compareTo(_getCardLastTestDate(b));
       } else {
         // 默认按标题排序
         cmp = a.title.compareTo(b.title);
@@ -218,6 +227,17 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
                   children: [
                     const Text('按自测评价情况'),
                     if (_sortBy == "selfTestScore")
+                      Icon(_sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                          size: 16)
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: "lastTestDate",
+                child: Row(
+                  children: [
+                    const Text('按上次自测时间'),
+                    if (_sortBy == "lastTestDate")
                       Icon(_sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
                           size: 16)
                   ],
