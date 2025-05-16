@@ -11,6 +11,8 @@ import '../../widgets/empty_card_view.dart';
 import '../card/card_create_screen.dart';
 import '../card/card_preview_screen.dart';  // 添加导入
 import '../../utils/card_parser.dart';
+import '../../utils/metadata_manager.dart';
+import '../../models/card_metadata.dart';
 
 class CardBoxDetailScreen extends StatefulWidget {
   final CardBox cardBox;
@@ -31,9 +33,11 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
   bool _isLoading = true;
   bool _isGridView = true;
   String _searchText = "";
-  String _sortBy = "title"; // "title" 或 "createdAt"
+  String _sortBy = "title"; // "title"、"createdAt" 或 "selfTestScore"
   bool _sortAsc = true;
   final TextEditingController _searchController = TextEditingController();
+  // 存储卡片元数据的映射表
+  final Map<String, CardMetadata?> _cardMetadataMap = {};
 
   @override
   void initState() {
@@ -68,7 +72,7 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
       if (mounted) {
         setState(() {
           _allCards = cards;
-          _applyFilterAndSort();
+          _loadAllCardMetadata(); // 加载所有卡片的元数据
         });
       }
     } catch (e) {
@@ -82,11 +86,34 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
     }
   }
 
-  void _onSearchChanged() {
-    setState(() {
-      _searchText = _searchController.text;
-      _applyFilterAndSort();
-    });
+  // 加载所有卡片的元数据
+  Future<void> _loadAllCardMetadata() async {
+    for (var card in _allCards) {
+      try {
+        final metadata = await MetadataManager.loadMetadata(
+          cardFilePath: card.filePath,
+        );
+        if (mounted) {
+          setState(() {
+            _cardMetadataMap[card.filePath] = metadata;
+          });
+        }
+      } catch (e) {
+        print('加载卡片元数据失败: ${e.toString()}');
+      }
+    }
+    // 加载完元数据后应用筛选和排序
+    if (mounted) {
+      setState(() {
+        _applyFilterAndSort();
+      });
+    }
+  }
+
+  // 获取卡片的自测评分，如果没有则返回默认值6
+  int _getCardSelfTestScore(CardModel card) {
+    final metadata = _cardMetadataMap[card.filePath];
+    return metadata?.selfTestScore ?? 6; // 没有自测评分的默认为6分
   }
 
   void _applyFilterAndSort() {
@@ -102,13 +129,26 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
       int cmp;
       if (_sortBy == "title") {
         cmp = a.title.compareTo(b.title);
-      } else {
-        // 假设CardModel有createdAt字段（DateTime类型），否则请替换为合适字段
+      } else if (_sortBy == "createdAt") {
+        // 按创建时间排序
         cmp = a.createdAt.compareTo(b.createdAt);
+      } else if (_sortBy == "selfTestScore") {
+        // 按自测评分排序，分数低的排前面
+        cmp = _getCardSelfTestScore(a).compareTo(_getCardSelfTestScore(b));
+      } else {
+        // 默认按标题排序
+        cmp = a.title.compareTo(b.title);
       }
       return _sortAsc ? cmp : -cmp;
     });
     _filteredCards = cards;
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchText = _searchController.text;
+      _applyFilterAndSort();
+    });
   }
 
   void _toggleSort(String field) {
@@ -165,6 +205,16 @@ class _CardBoxDetailScreenState extends State<CardBoxDetailScreen> {
                   children: [
                     const Text('按创建时间'),
                     if (_sortBy == "createdAt")
+                      Icon(_sortAsc ? Icons.arrow_upward : Icons.arrow_downward, size: 16)
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: "selfTestScore",
+                child: Row(
+                  children: [
+                    const Text('按复习情况'),
+                    if (_sortBy == "selfTestScore")
                       Icon(_sortAsc ? Icons.arrow_upward : Icons.arrow_downward, size: 16)
                   ],
                 ),
