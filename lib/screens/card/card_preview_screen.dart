@@ -305,8 +305,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                       Padding(
                         padding: const EdgeInsets.only(right: 8.0),
                         child: ElevatedButton.icon(
-                          onPressed: _showSelfTestRatingDialog,
-                          icon: const Icon(Icons.star, size: 16),
+                          onPressed: _showSelfTestRatingDialog,                          
                           label: Text(
                             '评分: ${_metadata!.selfTestScore}/10',
                             style: const TextStyle(
@@ -316,7 +315,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade700,
+                            backgroundColor: Colors.blue.shade600,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             shape: RoundedRectangleBorder(
@@ -324,28 +323,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                             ),
                           ),
                         ),
-                      ),
-                    // 添加自测评价按钮
-                    ElevatedButton.icon(
-                      onPressed: _showSelfTestRatingDialog,
-                      icon: const Icon(Icons.rate_review, size: 16),
-                      label: const Text(
-                        '自测评价',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                    ),
+                      ),                    
                   ],
                 ),
               ),
