@@ -74,7 +74,7 @@ class CardParser {
   // 从Markdown内容中解析整体概念
   static String parseConceptContent(String markdown) {
     // 查找整体概念部分
-    final conceptRegex = RegExp(r'# 整体概念\s*\n([\s\S]*?)(?=# |$)');
+    final conceptRegex = RegExp(r'# 整体概念\s*([\s\S]*?)(?=# |$)');
     final conceptMatch = conceptRegex.firstMatch(markdown);
     
     if (conceptMatch != null) {

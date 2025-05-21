@@ -652,7 +652,11 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
               final nextMatch = headerRegex.firstMatch(nextLine);
 
               if (nextMatch != null) {
-                break; // 遇到下一个标题，结束收集
+                final nextLevel = nextMatch.group(1)!.length;
+                if (nextLevel == 1) {
+                  break; // 只有遇到下一个一级标题才结束收集
+                }
+                // 继续收集二级及以下标题内容
               }
 
               contentBuilder.writeln(nextLine);
