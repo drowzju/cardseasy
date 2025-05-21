@@ -298,35 +298,36 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
-                    ),
-                    const Spacer(), // 添加空白区域，将评分和按钮推到右侧
-                    // 显示当前评分（如果有）- 移到右侧
-                    if (_metadata != null && _metadata!.selfTestScore > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: ElevatedButton.icon(
-                          onPressed: _showSelfTestRatingDialog,                          
-                          label: Text(
-                            '评分: ${_metadata!.selfTestScore}/10',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                      ),
+                      const Spacer(), // 添加空白区域，将评分和按钮推到右侧
+                      // 显示当前评分（如果有）- 移到右侧
+                      if (_metadata != null && _metadata!.selfTestScore > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ElevatedButton.icon(
+                            onPressed: _showSelfTestRatingDialog,
+                            label: Text(
+                              '评分: ${_metadata!.selfTestScore}/10',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade600,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.shade600,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                             ),
                           ),
                         ),
-                      ),                    
-                  ],
+                    ],
+                  ),
                 ),
-              ),
                 const Divider(height: 1),
                 // 自测内容
                 Expanded(
@@ -625,6 +626,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
     Section? currentSection;
     String? currentParentTitle;
     int currentLevel = 0;
+    String? currentL2Title; // 添加变量跟踪当前二级标题
 
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i];
@@ -670,6 +672,8 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
           }
         } else if (level == 2 && currentParentTitle != null) {
           // 二级标题，属于关键知识点或理解与关联
+          currentL2Title = title; // 记录当前二级标题
+
           final contentBuilder = StringBuffer();
           int j = i + 1;
           while (j < lines.length) {
@@ -677,7 +681,11 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
             final nextMatch = headerRegex.firstMatch(nextLine);
 
             if (nextMatch != null) {
-              break; // 遇到下一个标题，结束收集
+              final nextLevel = nextMatch.group(1)!.length;
+              if (nextLevel <= 2) {
+                break; // 遇到同级或更高级标题，结束收集
+              }
+              // 继续收集三级及以下标题内容
             }
 
             contentBuilder.writeln(nextLine);
@@ -692,6 +700,11 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
           );
 
           sections.add(currentSection);
+        } else if (level >= 3 &&
+            currentParentTitle != null &&
+            currentL2Title != null) {
+          // 处理三级及以下标题，将其内容添加到当前二级标题的内容中
+          // 这部分不需要单独处理，因为已经在二级标题内容收集时包含了
         }
       }
     }
@@ -728,7 +741,7 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => CardCreateScreen(
-          initialSaveDirectory: path.dirname(widget.card.filePath),          
+          initialSaveDirectory: path.dirname(widget.card.filePath),
           initialContent: conceptContent,
           initialKeyPoints: keyPoints,
           initialUnderstandings: understandings,
@@ -736,10 +749,10 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
         ),
       ),
     ).then((_) async {
-      widget.card.content = await CardParser.getCardContent(widget.card.filePath);
+      widget.card.content =
+          await CardParser.getCardContent(widget.card.filePath);
       // 刷新卡片内容
-      setState(()  {
-      });
+      setState(() {});
     });
   }
 }

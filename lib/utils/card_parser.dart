@@ -11,14 +11,15 @@ class CardParser {
     List<KeyPoint> keyPoints = [];
     
     // 查找关键知识点部分
-    final keyPointsRegex = RegExp(r'# 关键知识点\s*\n([\s\S]*?)(?=# |$)');
+    
+    final keyPointsRegex = RegExp(r'# 关键知识点\s*([\s\S]*?)(?=# |$)');
     final keyPointsMatch = keyPointsRegex.firstMatch(markdown);
     
     if (keyPointsMatch != null) {
       final keyPointsContent = keyPointsMatch.group(1) ?? '';
       
-      // 查找每个关键知识点
-      final keyPointRegex = RegExp(r'## (.*?)\s*\n([\s\S]*?)(?=## |$)');
+      // 查找每个关键知识点      
+      final keyPointRegex = RegExp(r'## (.*?)\s*([\s\S]*?)(?=## |$)');
       final keyPointMatches = keyPointRegex.allMatches(keyPointsContent);
       
       for (var match in keyPointMatches) {
@@ -43,14 +44,14 @@ class CardParser {
     List<Understanding> understandings = [];
     
     // 查找理解与关联部分
-    final understandingsRegex = RegExp(r'# 理解与关联\s*\n([\s\S]*?)(?=# |$)');
+    final understandingsRegex = RegExp(r'# 理解与关联\s*([\s\S]*?)(?=# |$)');
     final understandingsMatch = understandingsRegex.firstMatch(markdown);
     
     if (understandingsMatch != null) {
       final understandingsContent = understandingsMatch.group(1) ?? '';
       
       // 查找每个理解与关联
-      final understandingRegex = RegExp(r'## (.*?)\s*\n([\s\S]*?)(?=## |$)');
+      final understandingRegex = RegExp(r'## (.*?)\s*([\s\S]*?)(?=## |$)');
       final understandingMatches = understandingRegex.allMatches(understandingsContent);
       
       for (var match in understandingMatches) {
