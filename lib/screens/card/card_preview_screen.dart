@@ -300,31 +300,33 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                             ),
                       ),
                       const Spacer(), // 添加空白区域，将评分和按钮推到右侧
-                      // 显示当前评分（如果有）- 移到右侧
-                      if (_metadata != null && _metadata!.selfTestScore > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: ElevatedButton.icon(
-                            onPressed: _showSelfTestRatingDialog,
-                            label: Text(
-                              '评分: ${_metadata!.selfTestScore}/10',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                      // 修改评分按钮的显示逻辑
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: ElevatedButton.icon(
+                          onPressed: _showSelfTestRatingDialog,
+                          label: Text(
+                            // 如果元数据存在且评分有效，则显示实际评分，否则显示默认6分
+                            (_metadata != null && _metadata!.selfTestScore > 0)
+                                ? '评分: ${_metadata!.selfTestScore}/10'
+                                : '评分: 6/10',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
                             ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade600,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
                             ),
                           ),
                         ),
+                      ),
                     ],
                   ),
                 ),
