@@ -37,26 +37,10 @@ flutter run
 #### Windows
 
 ```bash
-flutter build windows
+flutter build windows --release
 ```
 
-#### macOS
-
-```bash
-flutter build macos
-```
-
-#### Android
-
-```bash
-flutter build apk
-```
-
-#### iOS
-
-```bash
-flutter build ios
-```
+#### TODO 支持其他平台
 
 ## 使用指南
 
