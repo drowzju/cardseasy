@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../models/card_model.dart';
 import '../../widgets/markdown_renderer.dart';
-import 'card_create_screen.dart';
-import '../../utils/card_parser.dart';
+import '../../widgets/single_item_self_test_compare_dialog.dart';
+import '../card/card_create_screen.dart';
+import '../../utils/dialog_utils.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/key_point.dart';
 import '../../models/understanding.dart';
 import 'package:path/path.dart' as path;
 import '../../utils/metadata_manager.dart';
 import '../../models/card_metadata.dart';
+import '../../utils/card_parser.dart';
+import '../../widgets/single_item_self_test_compare_dialog.dart';
 
 class CardPreviewScreen extends StatefulWidget {
   final CardModel card;
@@ -28,6 +31,9 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
   bool _isPreviewMode = true; // 默认为预览模式
   final Map<String, bool> _sectionVisibility = {}; // 用于存储每个章节的可见性状态
   CardMetadata? _metadata; // 添加元数据属性
+
+  // 修改：为每个条目创建独立的自测内容存储
+  final Map<String, String> _selfTestContents = {};
 
   @override
   void initState() {
@@ -300,6 +306,8 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                             ),
                       ),
                       const Spacer(), // 添加空白区域，将评分和按钮推到右侧
+                      // 自测对比按钮
+                      
                       // 修改评分按钮的显示逻辑
                       Padding(
                         padding: const EdgeInsets.only(right: 8.0),
@@ -558,21 +566,17 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
                         ),
                   ),
                 ),
+                // 对比练习按钮
                 IconButton(
                   icon: Icon(
-                    _sectionVisibility[section.title]!
-                        ? Icons.visibility
-                        : Icons.visibility_off,
+                    Icons.compare_arrows,
                     size: 18,
-                    color: Colors.grey.shade600,
+                    color: Colors.blue.shade600,
                   ),
                   onPressed: () {
-                    setState(() {
-                      _sectionVisibility[section.title] =
-                          !_sectionVisibility[section.title]!;
-                    });
+                    _showSelfTestCompareDialogForItem(section, parentTitle);
                   },
-                  tooltip: _sectionVisibility[section.title]! ? '隐藏内容' : '显示内容',
+                  tooltip: '对比练习',
                 ),
               ],
             ),
@@ -761,19 +765,34 @@ class _CardPreviewScreenState extends State<CardPreviewScreen> {
       setState(() {});
     });
   }
-}
 
-// 用于存储解析后的章节信息
-class Section {
-  final String title;
-  final String content;
-  final int level;
-  final String? parentTitle;
+  // 在dispose方法中清理缓存
+  @override
+  void dispose() {
+    _selfTestContents.clear(); // 清理自测内容缓存
+    super.dispose();
+  }
 
-  Section({
-    required this.title,
-    required this.content,
-    required this.level,
-    this.parentTitle,
-  });
+// 为单个条目显示自测对比对话框
+  void _showSelfTestCompareDialogForItem(Section section, String parentTitle) {
+    // 为每个条目创建唯一的键
+    final String itemKey = '${parentTitle}_${section.title}';
+    
+    showDialog(
+      context: context,
+      builder: (context) => SingleItemSelfTestCompareDialog(
+        cardTitle: widget.card.title,
+        itemTitle: section.title,
+        itemContent: section.content,
+        parentTitle: parentTitle,
+        cardDirectoryPath: path.dirname(widget.card.filePath),
+        initialTestContent: _selfTestContents[itemKey] ?? '',
+        onTestContentChanged: (content) {
+          setState(() {
+            _selfTestContents[itemKey] = content;
+          });
+        },
+      ),
+    );
+  }
 }
