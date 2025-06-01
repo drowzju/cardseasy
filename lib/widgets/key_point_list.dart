@@ -16,7 +16,7 @@ class KeyPointList extends StatelessWidget {
   final Function(String) onKeyPointToggleExpanded;
   final Function(String) onFormatSelected;
   final VoidCallback onImageSelected;
-  final String? saveDirectory; // 添加保存目录参数  
+  final String? saveDirectory;
 
   const KeyPointList({
     super.key,
@@ -30,7 +30,7 @@ class KeyPointList extends StatelessWidget {
     required this.onKeyPointToggleExpanded,
     required this.onFormatSelected,
     required this.onImageSelected,
-    required this.saveDirectory, // 添加保存目录参数
+    required this.saveDirectory,
   });
 
   @override
@@ -43,95 +43,122 @@ class KeyPointList extends StatelessWidget {
         itemBuilder: (context, index) {
           final keyPoint = keyPoints[index];
           final bool isSelected = currentKeyPointId == keyPoint.id;
-
-          // 确保每个知识点都有展开状态
           final bool isExpanded = keyPointExpandedStates[keyPoint.id] ?? true;
+          final controller = keyPointControllers[keyPoint.id];
+
+          if (controller == null) return const SizedBox.shrink();
 
           return Column(
             children: [
               ListTile(
-                leading: IconButton(
-                  icon: SvgPicture.asset(
-                    isExpanded
-                        ? 'assets/icons/expand_less.svg'
-                        : 'assets/icons/expand_more.svg',
-                    width: 24,
-                    height: 24,
-                    colorFilter: ColorFilter.mode(
-                      Theme.of(context).colorScheme.primary,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                  tooltip: isExpanded ? '折叠' : '展开',
-                  onPressed: () => onKeyPointToggleExpanded(keyPoint.id),
-                ),
-                title: Text(keyPoint.title),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                title: Row(
                   children: [
+                    InkWell(
+                      onTap: () => onKeyPointToggleExpanded(keyPoint.id),
+                      child: SvgPicture.asset(
+                        isExpanded
+                            ? 'assets/icons/expand_less.svg'
+                            : 'assets/icons/expand_more.svg',
+                        width: 20,
+                        height: 20,
+                        colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.primary,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        keyPoint.title,
+                        style: TextStyle(
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                      ),
+                    ),
                     IconButton(
                       icon: SvgPicture.asset(
                         'assets/icons/remove_key_point.svg',
-                        width: 24,
-                        height: 24,
+                        width: 20,
+                        height: 20,
                         colorFilter: ColorFilter.mode(
                           Theme.of(context).colorScheme.error,
                           BlendMode.srcIn,
                         ),
                       ),
-                      tooltip: '删除此知识点',
                       onPressed: () => onKeyPointDeleted(keyPoint.id),
+                      tooltip: '删除',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
                 onTap: () => onKeyPointSelected(keyPoint.id),
                 selected: isSelected,
-                selectedTileColor:
-                    Theme.of(context).colorScheme.primary.withOpacity(0.05),
               ),
-              if (isSelected && isExpanded)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Column(
-                    children: [
-                      MarkdownToolbar(
-                        currentEditMode: currentEditMode,
-                        onFormatSelected: onFormatSelected,
-                        onImageSelected: onImageSelected,
-                      ),
-                      Container(
-                        height: 150,
-                        margin: const EdgeInsets.only(bottom: 16.0),
-                        child: KeyboardListener(
-                          focusNode: FocusNode(),
-                          onKeyEvent: (KeyEvent event) {
-                            // 检测Ctrl+V组合键
-                            if (event is KeyDownEvent &&
-                                event.logicalKey == LogicalKeyboardKey.keyV &&
-                                HardwareKeyboard.instance.isControlPressed) {
-                              // 尝试处理粘贴的图片
-                              if (saveDirectory != null) {
-                                ImageHandler.handlePastedImage(
-                                    contentController: keyPointControllers[keyPoint.id]!,
-                                    saveDirectory: saveDirectory);
-                              }
-                            }
-                          },
-                          child: TextField(
-                            controller: keyPointControllers[keyPoint.id],
-                            maxLines: null,
-                            expands: true,
-                            decoration: const InputDecoration(
-                              hintText: '在这里输入知识点内容。支持文本和图片',
-                              border: OutlineInputBorder(),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                child: isExpanded
+                    ? Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            MarkdownToolbar(
+                              currentEditMode:
+                                  isSelected ? currentEditMode : 'text',
+                              onFormatSelected: (format) =>
+                                  onFormatSelected(format),
+                              onImageSelected: onImageSelected,
                             ),
-                          ),
+                            const SizedBox(height: 8),
+                            KeyboardListener(
+                              focusNode: FocusNode(),
+                              onKeyEvent: (KeyEvent event) {
+                                if (event is KeyDownEvent &&
+                                    event.logicalKey ==
+                                        LogicalKeyboardKey.keyV &&
+                                    HardwareKeyboard
+                                        .instance.isControlPressed) {
+                                  if (saveDirectory != null) {
+                                    ImageHandler.handlePastedImage(
+                                        contentController: controller,
+                                        saveDirectory: saveDirectory);
+                                  }
+                                }
+                              },
+                              child: TextField(
+                                controller: controller,
+                                maxLines: null,
+                                minLines: 3,
+                                decoration: InputDecoration(
+                                  hintText: '输入关键知识点内容...',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  filled: isSelected,
+                                  fillColor: isSelected
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer
+                                          .withOpacity(0.3)
+                                      : null,
+                                ),
+                                onTap: () => onKeyPointSelected(keyPoint.id),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              const Divider(),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              if (index < keyPoints.length - 1)
+                const Divider(height: 1, indent: 16, endIndent: 16),
             ],
           );
         },
