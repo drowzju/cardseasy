@@ -9,7 +9,7 @@ class MarkdownRenderer extends StatelessWidget {
   final bool selectable;
   final TextStyle? textStyle;
   final MarkdownStyleSheet? customStyleSheet;
-  final String? cardDirectoryPath; // 添加卡片目录路径参数
+  final String? cardDirectoryPath;
   
   const MarkdownRenderer({
     super.key,
@@ -17,39 +17,139 @@ class MarkdownRenderer extends StatelessWidget {
     this.selectable = true,
     this.textStyle,
     this.customStyleSheet,
-    this.cardDirectoryPath, // 添加卡片目录路径参数
+    this.cardDirectoryPath,
   });
   
   // 处理Obsidian风格的链接
   String _processObsidianLinks(String markdown) {
-    // 匹配Obsidian风格的图片链接: ![[filename.png]]
     final RegExp obsidianImgRegExp = RegExp(r'!\[\[(.*?)\]\]');
     
     return markdown.replaceAllMapped(obsidianImgRegExp, (Match match) {
       final String fileName = match.group(1) ?? '';
       if (fileName.isEmpty) return match.group(0) ?? '';
       
-
-      // 如果有卡片目录路径，使用相对路径，否则使用文件名
       if (cardDirectoryPath != null && cardDirectoryPath!.isNotEmpty) {
         final String imagePath = path.join(cardDirectoryPath!, fileName);
         final File imageFile = File(imagePath);
         if (imageFile.existsSync()) {
-          // 转换为标准Markdown格式
           return '![${path.basenameWithoutExtension(fileName)}](${imageFile.uri.toString()})';
         }
       }
       
-      // 如果找不到文件或没有目录路径，保持原样
       return match.group(0) ?? '';
     });
   }
   
+  // 检查文本是否包含高亮语法
+  bool _hasHighlightSyntax(String text) {
+    return text.contains(RegExp(r'==.+=='));
+  }
+  
+  // 构建包含高亮的富文本
+  Widget _buildRichTextWithHighlight(String text, BuildContext context) {
+    final List<TextSpan> spans = [];
+    final RegExp highlightRegExp = RegExp(r'==(.*?)==');
+    final RegExp boldRegExp = RegExp(r'\*\*(.*?)\*\*');
+    final RegExp italicRegExp = RegExp(r'_(.*?)_');
+    
+    // 简化处理：先处理高亮，再处理其他格式
+    String processedText = text;
+    final List<HighlightMatch> highlights = [];
+    
+    // 收集所有高亮匹配
+    for (final Match match in highlightRegExp.allMatches(text)) {
+      highlights.add(HighlightMatch(
+        start: match.start,
+        end: match.end,
+        text: match.group(1) ?? '',
+        originalMatch: match.group(0) ?? '',
+      ));
+    }
+    
+    // 从后往前替换，避免位置偏移
+    highlights.sort((a, b) => b.start.compareTo(a.start));
+    for (final highlight in highlights) {
+      processedText = processedText.replaceRange(
+        highlight.start,
+        highlight.end,
+        '🔆HIGHLIGHT:${highlight.text}🔆',
+      );
+    }
+    
+    // 现在处理所有格式
+    _parseFormattedText(processedText, spans, context);
+    
+    return SelectableText.rich(
+      TextSpan(children: spans),
+      style: textStyle ?? Theme.of(context).textTheme.bodyLarge,
+    );
+  }
+  
+  void _parseFormattedText(String text, List<TextSpan> spans, BuildContext context) {
+    final RegExp combinedRegExp = RegExp(r'(🔆HIGHLIGHT:(.*?)🔆|\*\*(.*?)\*\*|_(.*?)_)');
+    
+    int lastEnd = 0;
+    
+    for (final Match match in combinedRegExp.allMatches(text)) {
+      // 添加匹配前的普通文本
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastEnd, match.start),
+          style: textStyle ?? Theme.of(context).textTheme.bodyLarge,
+        ));
+      }
+      
+      // 根据匹配类型添加格式化文本
+      if (match.group(0)!.startsWith('🔆HIGHLIGHT:')) {
+        // 高亮文本
+        spans.add(TextSpan(
+          text: match.group(2) ?? '',
+          style: (textStyle ?? Theme.of(context).textTheme.bodyLarge!).copyWith(
+            backgroundColor: Colors.yellow.withOpacity(0.3),
+            color: Colors.black87,
+          ),
+        ));
+      } else if (match.group(3) != null) {
+        // 粗体文本
+        spans.add(TextSpan(
+          text: match.group(3) ?? '',
+          style: (textStyle ?? Theme.of(context).textTheme.bodyLarge!).copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ));
+      } else if (match.group(4) != null) {
+        // 斜体文本
+        spans.add(TextSpan(
+          text: match.group(4) ?? '',
+          style: (textStyle ?? Theme.of(context).textTheme.bodyLarge!).copyWith(
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      }
+      
+      lastEnd = match.end;
+    }
+    
+    // 添加剩余的普通文本
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastEnd),
+        style: textStyle ?? Theme.of(context).textTheme.bodyLarge,
+      ));
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
-    // 处理Obsidian风格的链接
-    final String processedData = _processObsidianLinks(data);
+    String processedData = _processObsidianLinks(data);
     
+    // 检查是否包含高亮语法
+    if (_hasHighlightSyntax(processedData)) {
+      // 对于包含高亮的文本，使用自定义富文本渲染
+      return _buildRichTextWithHighlight(processedData, context);
+    }
+    
+    // 对于不包含高亮的文本，使用标准 MarkdownBody
     return MarkdownBody(
       data: processedData,
       selectable: selectable,
@@ -57,19 +157,14 @@ class MarkdownRenderer extends StatelessWidget {
         try {
           String filePath;
           
-          // 处理不同类型的路径
           if (uri.scheme == 'file') {
-            // 文件协议路径
             filePath = uri.toFilePath();
           } else if (uri.path.isNotEmpty && cardDirectoryPath != null && cardDirectoryPath!.isNotEmpty) {
-            // 相对路径，结合卡片目录
             filePath = path.join(cardDirectoryPath!, uri.path);
           } else {
-            // 其他情况，直接使用路径
             filePath = uri.path;
           }
           
-          // 检查文件是否存在
           final File imageFile = File(filePath);
           if (!imageFile.existsSync()) {
             return Text('图片不存在: $filePath');
@@ -98,11 +193,25 @@ class MarkdownRenderer extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
       ),
       blockquote: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: Theme.of(context).colorScheme.secondary,
         fontStyle: FontStyle.italic,
       ),
     );
   }
+}
+
+// 高亮匹配数据类
+class HighlightMatch {
+  final int start;
+  final int end;
+  final String text;
+  final String originalMatch;
+  
+  HighlightMatch({
+    required this.start,
+    required this.end,
+    required this.text,
+    required this.originalMatch,
+  });
 }
 
 // 添加可缩放图片组件

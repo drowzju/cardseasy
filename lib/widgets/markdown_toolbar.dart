@@ -32,6 +32,12 @@ class MarkdownToolbar extends StatelessWidget {
             context: context,
           ),
           _buildSvgToolbarButton(
+            svgPath: 'assets/icons/highlight.svg',
+            tooltip: '高亮',
+            format: 'highlight',
+            context: context,
+          ),
+          _buildSvgToolbarButton(
             svgPath: 'assets/icons/list_bulleted.svg',
             tooltip: '无序列表',
             format: 'list',

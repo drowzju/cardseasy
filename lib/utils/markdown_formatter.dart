@@ -103,7 +103,7 @@ class MarkdownFormatter {
   static bool _needsSelectedText(String format) {
     return [
       'bold', 'italic', 'list', 'numbered_list',
-      'code_block'
+      'code_block', 'highlight'  // 添加高亮到需要选中文本的格式列表
     ].contains(format);
   }
   
@@ -117,6 +117,7 @@ class MarkdownFormatter {
       case 'code_block': return '代码块';
       case 'quote': return '引用';
       case 'hr': return '分割线';
+      case 'highlight': return '高亮';  // 添加高亮格式名称
       default: return format;
     }
   }
@@ -134,6 +135,10 @@ class MarkdownFormatter {
       case 'italic':
         prefix = '_';
         suffix = '_';
+        break;
+      case 'highlight':  // 添加高亮格式处理
+        prefix = '==';
+        suffix = '==';
         break;
       case 'heading1':
         prefix = '# ';
